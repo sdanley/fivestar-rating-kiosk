@@ -138,7 +138,8 @@
 
                 // Send rating to Google Apps Script
                 fetch('https://script.google.com/macros/s/AKfycbxN8Aj5uoq0dJj1lhgUJOAaeJS66tL11-eVSTtYfdIx/exec', {
-                    method: 'POST',
+                  redirect: "follow",
+                  method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
