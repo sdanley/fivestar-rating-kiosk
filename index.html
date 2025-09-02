@@ -135,6 +135,29 @@
                 } else {
                     document.getElementById('feedback-sound').play();
                 }
+
+                // Send rating to Google Apps Script
+                fetch('https://script.google.com/macros/s/AKfycbxN8Aj5uoq0dJj1lhgUJOAaeJS66tL11-eVSTtYfdIx/exec', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        device: deviceId,
+                        rating: value
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Server response:', data);
+                    // Optionally update UI with stats from server if available
+                    // Example:
+                    // document.getElementById('rating-value').textContent = `${data.averageRating} / 5`;
+                    // document.getElementById('total').textContent = data.totalRatings;
+                })
+                .catch(error => {
+                    console.error('Error posting rating:', error);
+                });
             });
         });
 
