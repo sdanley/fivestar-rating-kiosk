@@ -55,9 +55,8 @@
     .input-row input{background:var(--panel-alt);border:2px solid #273039;color:var(--text);padding:.95rem 1.15rem;font-size:1.3rem;border-radius:26px;text-align:center;letter-spacing:.55px;font-weight:600}
     .input-row input:focus{outline:none;box-shadow:var(--focus);border-color:var(--accent)}
     .input-row button{background:var(--accent);color:#222;font-size:1.05rem;font-weight:650;padding:.95rem 1.3rem;border:none;border-radius:999px;cursor:pointer;letter-spacing:.6px;box-shadow:0 6px 18px -6px rgba(0,0,0,.55)}
-    .icon-btn{width:56px;height:56px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--panel-alt);border:2px solid #22292f;cursor:pointer;transition:background .3s,transform .25s}
-    .icon-btn:hover{background:#232a31}
-    .icon-btn:focus-visible{outline:none;box-shadow:var(--focus)}
+    .icon-btn{width:56px;height:56px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--panel-alt);border:2px solid #22292f;cursor:pointer;transition:background .3s,transform .25s; color:var(--text);} /* added color for currentColor */
+    .icon-btn svg{width:28px;height:28px;display:block;pointer-events:none;} /* ensure visible on iOS */
     .notice{text-align:center;margin-top:.1rem;font-size:.6rem;color:var(--muted);letter-spacing:.35px}
     .footer-logo{margin-top:2.2rem;display:flex;justify-content:center;opacity:.45;transition:opacity .3s}
     .footer-logo:hover{opacity:.65}
@@ -126,9 +125,77 @@ if('serviceWorker' in navigator){
   const themeToggle=document.getElementById('themeToggle');
   const fsToggle=document.getElementById('fsToggle');
   const docEl=document.documentElement;
-  function themeIcon(){const light=docEl.classList.contains('theme-light');themeToggle.innerHTML=light?'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79z"/></svg>':'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22 5.64 5.64M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'; }
-  function fsIcon(){const fs=document.fullscreenElement||document.webkitFullscreenElement;fsToggle.innerHTML=fs?'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M9 9l-4-4m0 0h5M5 5v5M15 15l4 4m0 0h-5m5 0v-5M9 15l-4 4m0 0h5M5 19v-5M15 9l4-4m0 0h-5m5 0v5"/></svg>':'<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m0 8v3a2 2 0 0 0 2 2h3m8-18h3a2 2 0 0 1 2 2v3m0 8v3a2 2 0 0 1-2 2h-3"/></svg>'; }
-  const storedTheme=localStorage.getItem('standalone-theme'); if(storedTheme==='light') docEl.classList.add('theme-light'); themeIcon(); fsIcon();
+
+  // helper to build svg reliably on Safari/iOS
+  function setButtonIcon(btn, pathDefs){
+    const svgNS='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(svgNS,'svg');
+    svg.setAttribute('viewBox','0 0 24 24');
+    svg.setAttribute('width','28');
+    svg.setAttribute('height','28');
+    svg.setAttribute('aria-hidden','true');
+    pathDefs.forEach(def=>{
+      const p=document.createElementNS(svgNS,'path');
+      Object.entries(def).forEach(([k,v])=>p.setAttribute(k,v));
+      svg.appendChild(p);
+    });
+    btn.replaceChildren(svg);
+  }
+
+  function themeIcon(){
+    const light=docEl.classList.contains('theme-light');
+    if(light){
+      // moon icon
+      setButtonIcon(themeToggle,[
+        { d:"M21 12.79A9 9 0 0 1 11.21 3 7 7 0 1 0 21 12.79z", fill:"none", stroke:"currentColor", "stroke-width":"2", "stroke-linejoin":"round", "stroke-linecap":"round"}
+      ]);
+    } else {
+      // sun icon
+      setButtonIcon(themeToggle,[
+        { d:"M12 1v2", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M12 21v2", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M4.22 4.22 5.64 5.64", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M18.36 18.36l1.42 1.42", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M1 12h2", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M21 12h2", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M4.22 19.78l1.42-1.42", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M18.36 5.64l1.42-1.42", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z", fill:"none", stroke:"currentColor", "stroke-width":"2"}
+      ]);
+    }
+  }
+
+  function fsIcon(){
+    const fs=document.fullscreenElement||document.webkitFullscreenElement;
+    if(fs){
+      // collapse
+      setButtonIcon(fsToggle,[
+        { d:"M9 9l-4-4", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M5 5h5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M5 5v5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M15 15l4 4", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M19 19h-5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M19 19v-5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M9 15l-4 4", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M5 19h5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M5 19v-5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M15 9l4-4", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M19 5h-5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M19 5v5", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"}
+      ]);
+    } else {
+      // expand
+      setButtonIcon(fsToggle,[
+        { d:"M8 3H5a2 2 0 0 0-2 2v3", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M3 16v3a2 2 0 0 0 2 2h3", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M16 3h3a2 2 0 0 1 2 2v3", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"},
+        { d:"M21 16v3a2 2 0 0 1-2 2h-3", stroke:"currentColor", "stroke-width":"2", "stroke-linecap":"round"}
+      ]);
+    }
+  }
+
+  const storedTheme=localStorage.getItem('standalone-theme'); if(storedTheme==='light') docEl.classList.add('theme-light'); 
+  themeIcon(); fsIcon();
   themeToggle.addEventListener('click',()=>{docEl.classList.toggle('theme-light');localStorage.setItem('standalone-theme',docEl.classList.contains('theme-light')?'light':'dark');themeIcon();});
   fsToggle.addEventListener('click',()=>{const fs=document.fullscreenElement||document.webkitFullscreenElement;if(!fs){const r=document.documentElement;(r.requestFullscreen||r.webkitRequestFullscreen).call(r);}else{(document.exitFullscreen||document.webkitExitFullscreen).call(document);} });
   document.addEventListener('fullscreenchange',fsIcon);
