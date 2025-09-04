@@ -129,6 +129,8 @@ document.addEventListener('touchmove',e=>{ if(e.touches.length!==1) return; if(m
 <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="star-shape" viewBox="0 0 24 24"><path d="M12 2.4l2.9 6 6.6.9-4.9 4.8 1.2 6.6L12 17.9 6.2 20.7l1.2-6.6L2.5 9.3l6.6-.9L12 2.4z" /></symbol></svg>
 <div class="wrap">
   <div class="panel" id="panel">
+  <div id="netStatus" aria-live="polite" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);background:#d13a3c;color:#fff;font-size:.75rem;padding:.4rem .7rem;border-radius:999px;letter-spacing:.5px;box-shadow:0 4px 14px -6px rgba(0,0,0,.5);display:none;z-index:50">OFFLINE</div>
+  <div id="updateToast" style="position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel-alt);color:var(--text);font-size:.72rem;padding:.55rem .9rem;border:1px solid #2a3239;border-radius:999px;letter-spacing:.55px;display:none;z-index:60;box-shadow:0 6px 16px -8px rgba(0,0,0,.55);cursor:pointer">Update ready – tap to refresh</div>
     <div class="top-bar">
       <div class="bar-group" id="leftTools">
         <button class="icon-btn" id="themeToggle" aria-label="Toggle theme"></button>
@@ -346,6 +348,27 @@ if('serviceWorker' in navigator){
   themeToggle.addEventListener('focus',showTopBar); fsToggle.addEventListener('focus',showTopBar);
   themeToggle.addEventListener('blur',scheduleHide); fsToggle.addEventListener('blur',scheduleHide);
   document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ showTopBar(); }});
+
+  // Network status indicator
+  const netStatus=document.getElementById('netStatus');
+  function updateOnline(){ if(!netStatus) return; if(navigator.onLine){ netStatus.style.display='none'; } else { netStatus.style.display='block'; } }
+  window.addEventListener('online',updateOnline); window.addEventListener('offline',updateOnline); updateOnline();
+
+  // SW update toast
+  const updateToast=document.getElementById('updateToast');
+  navigator.serviceWorker?.addEventListener('message',evt=>{
+    if(evt.data && evt.data.type==='sw:activated'){
+      if(updateToast){ updateToast.textContent='Updated'; updateToast.style.display='block'; setTimeout(()=>{updateToast.style.display='none';},1800); }
+    }
+  });
+  // If a waiting worker appears, prompt user
+  if(navigator.serviceWorker){
+    navigator.serviceWorker.getRegistration().then(reg=>{
+      if(!reg) return; if(reg.waiting){ showUpdateToast(reg.waiting); }
+      reg.addEventListener('updatefound',()=>{ const nw=reg.installing; if(!nw) return; nw.addEventListener('statechange',()=>{ if(nw.state==='installed' && reg.waiting){ showUpdateToast(reg.waiting); } }); });
+    });
+  }
+  function showUpdateToast(sw){ if(!updateToast) return; updateToast.style.display='block'; updateToast.onclick=()=>{ sw.postMessage('sw:update'); location.reload(); } }
 
   document.addEventListener('keydown',e=>{
     if(!currentId) return;

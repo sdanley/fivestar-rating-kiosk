@@ -1,55 +1,80 @@
-// Simple service worker for offline support
-const CACHE_NAME = 'rating-app-v1';
+// Service Worker: offline + kiosk enhancements
+// Increment version to invalidate old caches when app changes
+const VERSION = 'v2';
+const CACHE_NAME = `rating-app-${VERSION}`;
+// Core assets for shell (add png icons for iOS install splash support)
 const CORE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
   '/icon-192.svg',
   '/icon-512.svg',
+  '/icon-192.png',
+  '/icon-512.png',
   '/logo.svg'
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(CORE_ASSETS)).then(() => self.skipWaiting())
-  );
+  event.waitUntil((async()=>{
+    const cache=await caches.open(CACHE_NAME);
+    try { await cache.addAll(CORE_ASSETS); } catch(e){ /* ignore individual failure */ }
+    // Warm navigation fallback: ensure index stored
+    try { const res=await fetch('/index.html',{cache:'no-store'}); await cache.put('/index.html',res.clone()); } catch{}
+  })().then(()=>self.skipWaiting()));
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim())
-  );
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k)));
+    await self.clients.claim();
+    // Notify clients of new version
+    const clients=await self.clients.matchAll({includeUncontrolled:true});
+    for(const client of clients){ client.postMessage({type:'sw:activated',version:VERSION}); }
+  })());
 });
 
 self.addEventListener('fetch', event => {
   const req = event.request;
-  if (req.method !== 'GET') return; // pass through non-GET
+  if (req.method !== 'GET') return; // Only handle GET
   const url = new URL(req.url);
 
-  // Network-first for navigation requests (HTML) with offline fallback
+  // Treat all navigation (including query/hash) as app shell
   if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req).then(r => {
-        const copy = r.clone();
-        caches.open(CACHE_NAME).then(c => c.put('/index.html', copy));
-        return r;
-      }).catch(() => caches.match('/index.html'))
-    );
+    event.respondWith((async()=>{
+      try {
+        const netRes = await fetch(req);
+        // Update cached shell asynchronously
+        const cache = await caches.open(CACHE_NAME);
+        cache.put('/index.html', netRes.clone());
+        return netRes;
+      } catch {
+        // offline fallback
+        const cacheHit = await caches.match('/index.html');
+        return cacheHit || new Response('<!doctype html><title>Offline</title><h1>Offline</h1><p>Content unavailable.</p>',{headers:{'Content-Type':'text/html'}});
+      }
+    })());
     return;
   }
 
-  // Cache-first for same-origin static assets
+  // Same-origin: stale-while-revalidate strategy
   if (url.origin === location.origin) {
-    event.respondWith(
-      caches.match(req).then(cached => {
-        if (cached) return cached;
-        return fetch(req).then(r => {
-          // opportunistic cache
-            const copy = r.clone();
-            caches.open(CACHE_NAME).then(c => c.put(req, copy));
-            return r;
-        }).catch(() => cached);
-      })
-    );
+    event.respondWith((async()=>{
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(req);
+      const fetchPromise = fetch(req).then(res=>{ if(res.ok){ cache.put(req,res.clone()); } return res; }).catch(()=>null);
+      return cached || fetchPromise || new Response('',{status:504,statusText:'Offline'});
+    })());
+    return;
   }
+
+  // Cross-origin: network first, fallback to cache if previously stored
+  event.respondWith((async()=>{
+    try { return await fetch(req); } catch { return caches.match(req); }
+  })());
+});
+
+// Allow page to trigger immediate skipWaiting
+self.addEventListener('message', e=>{
+  if(e.data === 'sw:update'){ self.skipWaiting(); }
 });
