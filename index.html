@@ -394,6 +394,25 @@ if('serviceWorker' in navigator){
   });
 
   starsContainer.addEventListener('focusin',()=>{showHint();});
+  // Allow changing product after initial selection (PWA lacks address bar to edit ?m=)
+  function enterChangeMode(){
+    if(!idInputWrapper) return;
+    idInputWrapper.classList.remove('hidden');
+    if(idInput){ idInput.value=currentId; idInput.focus(); }
+    starsContainer.classList.add('hidden');
+    averageBlock.classList.add('hidden');
+    yourLabel.classList.add('hidden');
+    document.querySelector('.panel')?.classList.remove('rating-active');
+    statusDiv.textContent='Change product name';
+  }
+  // Triple-tap gesture within 1.2s
+  let headingTapTimes=[]; heading.addEventListener('click',()=>{ const now=Date.now(); headingTapTimes=headingTapTimes.filter(t=> now - t < 1200); headingTapTimes.push(now); if(headingTapTimes.length>=3){ headingTapTimes=[]; enterChangeMode(); } });
+  // Long-press (900ms) on heading
+  let pressTimer=null; function cancelPress(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer=null; } }
+  ['touchstart','mousedown'].forEach(ev=> heading.addEventListener(ev,(e)=>{ if(ev==='mousedown' && e.button!==0) return; cancelPress(); pressTimer=setTimeout(()=>{ enterChangeMode(); },900); }, {passive:true}));
+  ['touchend','touchcancel','mouseup','mouseleave','blur'].forEach(ev=> heading.addEventListener(ev,cancelPress));
+  // Keyboard shortcut: Ctrl+Shift+C to change
+  document.addEventListener('keydown',e=>{ if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='c'){ enterChangeMode(); }});
 })();</script>
 </body>
 </html>
