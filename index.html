@@ -483,6 +483,7 @@ if('serviceWorker' in navigator){
   const clearBtn=document.getElementById('clearData');
   const adminClose=document.querySelector('.admin-close');
   let wakeLockObj=null; let wakeRequested=false; let adminTapTimes=[]; let hotspotPressTimer=null; const HOT_CORNER_PX=70;
+  let fallbackVideo=null; let fallbackActive=false;
 
   function updateAdminStats(){
     if(!currentId){ adminProduct.textContent='--'; adminAvg.textContent='--'; adminCount.textContent='0'; adminStats.textContent='No product selected.'; return; }
@@ -498,15 +499,34 @@ if('serviceWorker' in navigator){
   function setRevisionAdmin(){ if(window.__appRevision && adminRevision){ adminRevision.textContent=window.__appRevision; } }
   setRevisionAdmin();
 
-  async function acquireWake(){
-    if(!('wakeLock' in navigator)) { flash('Wake Lock unsupported',true); return; }
-    try{ wakeLockObj = await navigator.wakeLock.request('screen'); wakeRequested=true; updateWakeUI(); wakeLockObj.addEventListener('release',()=>{ updateWakeUI(); }); }
-    catch(err){ wakeRequested=false; flash('Wake Lock failed',true); updateWakeUI(); }
+  function startFallbackWake(){
+    if(fallbackActive) return;
+    const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    if(!isiOS) return; // only needed for iOS
+    const v=document.createElement('video');
+    v.setAttribute('playsinline',''); v.muted=true; v.loop=true; v.autoplay=true; v.disablePictureInPicture=true; v.controls=false;
+    v.style.position='fixed'; v.style.left='-10px'; v.style.top='-10px'; v.style.width='1px'; v.style.height='1px'; v.style.opacity='0'; v.style.pointerEvents='none';
+    // Tiny silent mp4 (1s black) base64
+    v.src="data:video/mp4;base64,AAAAHGZ0eXBtcDQyAAAAAG1wNDFpc28yYXZjMW1wNDEAAAAIZnJlZQAAAChtZGF0AAAAIGZsb2F0AAAADmlzb21pc28ybXA0MQAAAAhmcmVlAAAAEG1kYXQhEAUAAQABAAAAGG1vb3YAAABsbXZoZAAAAAB8AAABcAABAAACAAAAVAAAACoAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAAABkG1kYXQAAAAYZHRyYWsAAABcdGtoZAAAAAHwAAABcAAAAgAAAACoAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAABAAAAAABkAAAAAABkAAAAAAA=";
+    document.body.appendChild(v);
+    const playAttempt=()=>{ v.play().catch(()=> setTimeout(playAttempt,800)); };
+    playAttempt();
+    fallbackVideo=v; fallbackActive=true; wakeRequested=true; updateWakeUI();
   }
-  function releaseWake(){ if(wakeLockObj){ wakeLockObj.release().catch(()=>{}); wakeLockObj=null; } wakeRequested=false; updateWakeUI(); }
-  function updateWakeUI(){ if(!wakeStatus||!wakeToggle) return; const on=!!wakeLockObj; wakeStatus.textContent= on ? 'WAKE ON' : 'WAKE OFF'; wakeStatus.dataset.state= on ? 'on':'off'; wakeToggle.textContent= on ? 'Disable Wake Lock' : 'Enable Wake Lock'; }
+  function stopFallbackWake(){ if(fallbackVideo){ try{fallbackVideo.pause();}catch{} fallbackVideo.remove(); fallbackVideo=null; } fallbackActive=false; }
+  async function acquireWake(){
+    wakeRequested=true;
+    if('wakeLock' in navigator){
+      try{ wakeLockObj = await navigator.wakeLock.request('screen'); updateWakeUI(); wakeLockObj.addEventListener('release',()=>{ updateWakeUI(); if(wakeRequested && !fallbackActive) startFallbackWake(); }); return; }
+      catch(err){ console.warn('Wake Lock request failed, using fallback',err); }
+    }
+    // Fallback path
+    startFallbackWake(); updateWakeUI();
+  }
+  function releaseWake(){ wakeRequested=false; if(wakeLockObj){ wakeLockObj.release().catch(()=>{}); wakeLockObj=null; } stopFallbackWake(); updateWakeUI(); }
+  function updateWakeUI(){ if(!wakeStatus||!wakeToggle) return; const on=!!wakeLockObj || fallbackActive; wakeStatus.textContent= on ? (fallbackActive? 'WAKE Fallback':'WAKE ON') : 'WAKE OFF'; wakeStatus.dataset.state= on ? 'on':'off'; wakeToggle.textContent= on ? 'Disable Wake Lock' : 'Enable Wake Lock'; }
   wakeToggle?.addEventListener('click',()=>{ if(wakeLockObj) releaseWake(); else acquireWake(); });
-  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && wakeRequested && !wakeLockObj){ acquireWake(); } });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && wakeRequested && !wakeLockObj && !fallbackActive){ acquireWake(); } });
 
   function openAdmin(){ adminOverlay?.classList.remove('hidden'); updateAdminStats(); setRevisionAdmin(); }
   function closeAdmin(){ adminOverlay?.classList.add('hidden'); }
