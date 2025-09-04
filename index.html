@@ -79,6 +79,20 @@
     body.kiosk-no-select,body.kiosk-no-select *:not(input,textarea,[contenteditable],#status,.status){
       -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
     }
+  /* Admin overlay (hotspot now coordinate-based, no element) */
+  .admin-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(10px);z-index:300;padding:2rem;}
+  .admin-overlay.hidden{display:none!important}
+  .admin-box{background:var(--panel);border:1px solid #2a3239;border-radius:28px;max-width:560px;width:100%;padding:1.6rem 1.4rem 2rem;box-shadow:0 14px 50px -16px rgba(0,0,0,.75),0 4px 14px rgba(0,0,0,.5);font-size:.9rem;line-height:1.35;}
+  html.theme-light .admin-box{border-color:#d8dde1;background:#fff}
+  .admin-box h2{margin:.1rem 0 1rem;font-size:1.35rem;letter-spacing:.8px}
+  .admin-meta{display:grid;grid-template-columns:auto 1fr;gap:.4rem .9rem;margin-bottom:1rem;font-size:.8rem;letter-spacing:.4px}
+  .admin-meta div.label{font-weight:600;color:var(--muted);text-align:right}
+  .admin-actions{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.4rem}
+  .admin-actions button{flex:1 1 auto;min-width:120px;background:var(--accent);color:#222;font-weight:600;border:none;border-radius:18px;padding:.7rem 1rem;cursor:pointer;font-size:.75rem;letter-spacing:.5px}
+  .admin-actions button.sec{background:var(--panel-alt);color:var(--text);border:1px solid #2a3239}
+  .admin-close{position:absolute;top:10px;right:12px;background:var(--panel-alt);border:1px solid #2a3239;color:var(--text);border-radius:50%;width:38px;height:38px;font-weight:700;cursor:pointer;}
+  .admin-stats{font-family:ui-monospace,monospace;background:var(--panel-alt);border:1px solid #2a3239;border-radius:16px;padding:.75rem .9rem;margin-top:.4rem;font-size:.7rem;max-height:160px;overflow:auto;}
+  .wake-badge{display:inline-block;margin-left:.4rem;padding:.15rem .45rem;font-size:.55rem;border:1px solid #2a3239;border-radius:10px;letter-spacing:.5px;background:var(--panel-alt);}
 </style>
 <link rel="manifest" href="manifest.webmanifest" crossorigin="use-credentials" />
 <script>
@@ -129,25 +143,41 @@ document.addEventListener('touchmove',e=>{ if(e.touches.length!==1) return; if(m
 <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="star-shape" viewBox="0 0 24 24"><path d="M12 2.4l2.9 6 6.6.9-4.9 4.8 1.2 6.6L12 17.9 6.2 20.7l1.2-6.6L2.5 9.3l6.6-.9L12 2.4z" /></symbol></svg>
 <div class="wrap">
   <div class="panel" id="panel">
-  <div id="netStatus" aria-live="polite" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);background:#d13a3c;color:#fff;font-size:.75rem;padding:.4rem .7rem;border-radius:999px;letter-spacing:.5px;box-shadow:0 4px 14px -6px rgba(0,0,0,.5);display:none;z-index:50">OFFLINE</div>
   <div id="updateToast" style="position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel-alt);color:var(--text);font-size:.72rem;padding:.55rem .9rem;border:1px solid #2a3239;border-radius:999px;letter-spacing:.55px;display:none;z-index:60;box-shadow:0 6px 16px -8px rgba(0,0,0,.55);cursor:pointer">Update ready – tap to refresh</div>
-    <div id="verBadge" style="position:fixed;right:8px;bottom:8px;font-size:.55rem;font-weight:600;letter-spacing:.8px;padding:.3rem .5rem;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:var(--muted);z-index:40;pointer-events:none;opacity:.55">--</div>
+  <!-- Hidden Admin Overlay -->
+    <div id="adminOverlay" class="admin-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+      <div class="admin-box">
+        <button class="admin-close" type="button" aria-label="Close">×</button>
+        <h2 id="adminTitle">Kiosk Admin <span id="wakeStatus" class="wake-badge" data-state="off">WAKE OFF</span></h2>
+        <div class="admin-meta">
+          <div class="label">Revision</div><div id="adminRevision">--</div>
+          <div class="label">Product</div><div id="adminProduct">--</div>
+          <div class="label">Average</div><div id="adminAvg">--</div>
+          <div class="label">Ratings</div><div id="adminCount">0</div>
+          <div class="label">Online</div><div id="adminOnline">--</div>
+        </div>
+        <div class="admin-actions">
+          <button id="wakeToggle" type="button">Enable Wake Lock</button>
+          <button id="exportData" type="button" class="sec">Export Data</button>
+          <button id="clearData" type="button" class="sec" style="background:var(--danger);color:#fff;">Clear Data</button>
+        </div>
+        <div class="admin-stats" id="adminStats" aria-label="Rating Buckets"></div>
+  <div style="margin-top:1rem;font-size:.6rem;color:var(--muted);text-align:center">Tap corner hotspot (5x) or long-press corner to open. Tap outside box or press ESC to close.</div>
+      </div>
+    </div>
     <script>
-    // Early version badge fallback (iPad standalone quirk)
+    // Early revision load (no on-screen badge; store globally & update admin overlay only)
     (function(){
-      const vb=document.getElementById('verBadge'); if(!vb) return;
-      // If still unknown after 1s, try direct fetch (may run before main script finishes)
-      setTimeout(()=>{
-        if(vb.textContent && vb.textContent.trim()!=='--') return;
-  // Try version.json first (updated per commit if deployed)
-  fetch('/version.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{ if(j && j.version){ vb.textContent='REV '+j.version; } }).catch(()=>{}).finally(()=>{
-        fetch('/sw.js',{cache:'no-store'}).then(r=>r.text()).then(txt=>{
-          const m=txt.match(/const\s+VERSION\s*=\s*['"]([^'"`]+)['"]/); if(m){ vb.textContent='REV '+m[1]; }
-  }).catch(()=>{});
-  });
-      },1000);
+      function setRev(v){ if(!v) return; window.__appRevision=v; const ar=document.getElementById('adminRevision'); if(ar) ar.textContent=v; }
+      // Try version.json (preferred per-commit)
+      fetch('/version.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{ if(j && j.version) setRev(j.version); }).catch(()=>{})
+      .finally(()=>{
+        if(window.__appRevision) return;
+        fetch('/sw.js',{cache:'no-store'}).then(r=>r.text()).then(txt=>{ const m=txt.match(/const\s+VERSION\s*=\s*['"]([^'"`]+)['"]/); if(m) setRev(m[1]); }).catch(()=>{});
+      });
     })();
     </script>
+  <!-- (Removed on-screen revision badge; revision now only in admin overlay) -->
     <div class="top-bar">
       <div class="bar-group" id="leftTools">
         <button class="icon-btn" id="themeToggle" aria-label="Toggle theme"></button>
@@ -376,7 +406,8 @@ if('serviceWorker' in navigator){
       if(updateToast){ updateToast.textContent='Updated'; updateToast.style.display='block'; setTimeout(()=>{updateToast.style.display='none';},1800); }
     }
     if(evt.data && evt.data.type==='sw:version'){
-  const vb=document.getElementById('verBadge'); if(vb){ vb.textContent='REV '+evt.data.version; }
+      window.__appRevision=evt.data.version;
+      const ar=document.getElementById('adminRevision'); if(ar) ar.textContent=evt.data.version;
     }
   });
   // If a waiting worker appears, prompt user
@@ -394,18 +425,13 @@ if('serviceWorker' in navigator){
     if(navigator.serviceWorker.controller){ ask(); }
     navigator.serviceWorker.ready.then(()=>ask());
     navigator.serviceWorker.addEventListener('controllerchange',()=>{ setTimeout(ask,60); });
-    // Fallback timeout: hide badge if still empty after 5s
-    setTimeout(()=>{ const vb=document.getElementById('verBadge'); if(vb && /^(--)?$/.test(vb.textContent.trim())) vb.style.opacity='.25'; },5000);
+  // Removed badge fallback visual; only store revision
     // Fetch sw.js and parse VERSION if badge still unknown (Safari/iPad fallback)
     function fetchVersionFallback(){
-      const vb=document.getElementById('verBadge');
-      if(!vb) return;
-      if(vb.textContent && vb.textContent.trim()!=='--') return; // already filled
+      if(window.__appRevision) return; // already known
       fetch('/sw.js',{cache:'no-store'}).then(r=>r.text()).then(txt=>{
         const m=txt.match(/const\s+VERSION\s*=\s*['"]([^'"`]+)['"]/);
-        if(m && (vb.textContent.trim()==='--' || vb.textContent.trim()==='')){
-          vb.textContent='REV '+m[1]; vb.style.opacity='.55';
-        }
+        if(m && !window.__appRevision){ window.__appRevision=m[1]; const ar=document.getElementById('adminRevision'); if(ar) ar.textContent=m[1]; }
       }).catch(()=>{});
     }
     setTimeout(fetchVersionFallback,2500);
@@ -442,6 +468,114 @@ if('serviceWorker' in navigator){
   ['touchend','touchcancel','mouseup','mouseleave','blur'].forEach(ev=> heading.addEventListener(ev,cancelPress));
   // Keyboard shortcut: Ctrl+Shift+C to change
   document.addEventListener('keydown',e=>{ if(e.ctrlKey && e.shiftKey && e.key.toLowerCase()==='c'){ enterChangeMode(); }});
+
+  // ================= Admin Overlay & Wake Lock =================
+  const adminOverlay=document.getElementById('adminOverlay');
+  const wakeToggle=document.getElementById('wakeToggle');
+  const wakeStatus=document.getElementById('wakeStatus');
+  const adminRevision=document.getElementById('adminRevision');
+  const adminProduct=document.getElementById('adminProduct');
+  const adminAvg=document.getElementById('adminAvg');
+  const adminCount=document.getElementById('adminCount');
+  const adminOnline=document.getElementById('adminOnline');
+  const adminStats=document.getElementById('adminStats');
+  const exportBtn=document.getElementById('exportData');
+  const clearBtn=document.getElementById('clearData');
+  const adminClose=document.querySelector('.admin-close');
+  let wakeLockObj=null; let wakeRequested=false; let adminTapTimes=[]; let hotspotPressTimer=null; const HOT_CORNER_PX=70;
+
+  function updateAdminStats(){
+    if(!currentId){ adminProduct.textContent='--'; adminAvg.textContent='--'; adminCount.textContent='0'; adminStats.textContent='No product selected.'; return; }
+    adminProduct.textContent=currentId;
+    const agg=loadAgg(currentId);
+    const {txt,v}=fmtAvg(agg.count,agg.total);
+    adminAvg.textContent=txt==='--'?'--':`${txt} (${(v/5*100).toFixed(1)}%)`;
+    adminCount.textContent=String(agg.count);
+    adminStats.textContent=agg.buckets.map((c,i)=>`${i+1}★: ${c}`).join('  |  ');
+  }
+  function updateOnlineAdmin(){ if(adminOnline) adminOnline.textContent = navigator.onLine ? 'Yes' : 'No'; }
+  window.addEventListener('online',updateOnlineAdmin); window.addEventListener('offline',updateOnlineAdmin); updateOnlineAdmin();
+  function setRevisionAdmin(){ if(window.__appRevision && adminRevision){ adminRevision.textContent=window.__appRevision; } }
+  setRevisionAdmin();
+
+  async function acquireWake(){
+    if(!('wakeLock' in navigator)) { flash('Wake Lock unsupported',true); return; }
+    try{ wakeLockObj = await navigator.wakeLock.request('screen'); wakeRequested=true; updateWakeUI(); wakeLockObj.addEventListener('release',()=>{ updateWakeUI(); }); }
+    catch(err){ wakeRequested=false; flash('Wake Lock failed',true); updateWakeUI(); }
+  }
+  function releaseWake(){ if(wakeLockObj){ wakeLockObj.release().catch(()=>{}); wakeLockObj=null; } wakeRequested=false; updateWakeUI(); }
+  function updateWakeUI(){ if(!wakeStatus||!wakeToggle) return; const on=!!wakeLockObj; wakeStatus.textContent= on ? 'WAKE ON' : 'WAKE OFF'; wakeStatus.dataset.state= on ? 'on':'off'; wakeToggle.textContent= on ? 'Disable Wake Lock' : 'Enable Wake Lock'; }
+  wakeToggle?.addEventListener('click',()=>{ if(wakeLockObj) releaseWake(); else acquireWake(); });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible' && wakeRequested && !wakeLockObj){ acquireWake(); } });
+
+  function openAdmin(){ adminOverlay?.classList.remove('hidden'); updateAdminStats(); setRevisionAdmin(); }
+  function closeAdmin(){ adminOverlay?.classList.add('hidden'); }
+  adminClose?.addEventListener('click',closeAdmin);
+  // Close when tapping backdrop (outside admin-box)
+  adminOverlay?.addEventListener('click',e=>{ if(e.target===adminOverlay) closeAdmin(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !adminOverlay.classList.contains('hidden')) closeAdmin(); });
+
+  // Coordinate Hot Corner (bottom-right): 5 taps within 1500ms OR long-press 900ms in corner zone
+  function inHotCorner(x,y){ const vw=window.innerWidth, vh=window.innerHeight; return x>vw-HOT_CORNER_PX && y>vh-HOT_CORNER_PX; }
+  function registerCornerTap(){ const now=Date.now(); adminTapTimes=adminTapTimes.filter(t=> now - t < 1500); adminTapTimes.push(now); if(adminTapTimes.length>=5){ adminTapTimes=[]; openAdmin(); }}
+  function hotspotCancel(){ if(hotspotPressTimer){ clearTimeout(hotspotPressTimer); hotspotPressTimer=null; } }
+  document.addEventListener('click',e=>{ if(inHotCorner(e.clientX,e.clientY)) registerCornerTap(); });
+  ['touchstart','mousedown'].forEach(ev=> document.addEventListener(ev,(e)=>{ const pt = ev.startsWith('touch') ? (e.touches&&e.touches[0]) : e; if(!pt) return; if(ev==='mousedown' && e.button!==0) return; if(!inHotCorner(pt.clientX,pt.clientY)) return; hotspotCancel(); hotspotPressTimer=setTimeout(()=>{ openAdmin(); },900); },{passive:true}));
+  ['touchend','touchcancel','mouseup','mouseleave','blur'].forEach(ev=> document.addEventListener(ev,hotspotCancel));
+
+  exportBtn?.addEventListener('click',async()=>{
+    try {
+      const data={}; Object.keys(localStorage).filter(k=>k.startsWith('rating:mattress:')).forEach(k=>{ try{data[k]=JSON.parse(localStorage.getItem(k)||'null');}catch{}});
+      const json=JSON.stringify(data,null,2);
+      const blob=new Blob([json],{type:'application/json'});
+      const filename='ratings-export-'+Date.now()+'.json';
+      const a=document.createElement('a');
+      const url=URL.createObjectURL(blob);
+      a.href=url; a.download=filename; a.style.display='none'; document.body.appendChild(a);
+      let attempted=false;
+      try{ a.click(); attempted=true; }catch{ attempted=false; }
+      // Safari / iOS PWA fallback (download attribute sometimes ignored)
+      const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+      if(!attempted || isiOS){
+        // If file not saved (heuristic): provide alternate methods
+        // 1. Try clipboard
+        let clipped=false;
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          try{ await navigator.clipboard.writeText(json); clipped=true; flash('Data copied to clipboard',false); }catch{}
+        }
+        if(!clipped){
+          // 2. Open in a new window/tab as data URL
+            const dataUrl='data:application/json;charset=utf-8,'+encodeURIComponent(json);
+            window.open(dataUrl,'_blank');
+            flash('Opened export in new tab',false);
+        }
+      } else {
+        flash('Export downloaded',false);
+      }
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1200);
+    } catch(err){
+      console.warn('Export failed',err); flash('Export failed',true);
+    }
+  });
+  clearBtn?.addEventListener('click',()=>{
+    if(!confirm('Clear ALL rating data?')) return;
+    Object.keys(localStorage).filter(k=>k.startsWith('rating:mattress:')).forEach(k=>localStorage.removeItem(k));
+    flash('All data cleared',false); updateAdminStats(); if(currentId){ updateUI(loadAgg(currentId)); paintStars(); }
+  });
+
+  // Reflect offline state inside admin (hide old floating badge replaced by admin view)
+  window.addEventListener('online',()=>updateOnlineAdmin());
+  window.addEventListener('offline',()=>updateOnlineAdmin());
+
+  // Update stats when ratings saved
+  const origCommit=commitRating; // not redefining variable outside scope but intercept not possible, so ensure updateAdminStats called after rating commit
+  // Instead, observe avgLine changes to refresh admin stats
+  const avgObs=new MutationObserver(()=>{ updateAdminStats(); }); avgObs.observe(avgLine,{childList:true,subtree:true});
+
+  // Public functions exposure not needed; just ensure initial stats state
+  updateAdminStats();
+  updateWakeUI();
+  
 })();</script>
 </body>
 </html>
