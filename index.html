@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" translate="no">
+<html lang="en" translate="no">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
@@ -84,7 +85,20 @@
         <button class="icon-btn" id="fsToggle" aria-label="Fullscreen"></button>
       </div>
       <div style="flex:1"></div>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><symbol id="star-shape" viewBox="0 0 24 24"><path d="M12 2.4l2.9 6 6.6.9-4.9 4.8 1.2 6.6L12 17.9 6.2 20.7l1.2-6.6L2.5 9.3l6.6-.9L12 2.4z" /></symbol></svg>
+<div class="wrap">
+  <div class="panel" id="panel">
+    <div class="top-bar">
+      <div class="bar-group" id="leftTools">
+        <button class="icon-btn" id="themeToggle" aria-label="Toggle theme"></button>
+        <button class="icon-btn" id="fsToggle" aria-label="Fullscreen"></button>
+      </div>
+      <div style="flex:1"></div>
     </div>
+    <h1 id="headingMain">Product Rating</h1>
+    <div id="averageBlock" class="average-block hidden" aria-describedby="liveAnnouncer">
+      <div id="avgStars" class="avg-stars" aria-hidden="true"></div>
+      <div id="avgLine" class="avg-line">-- out of 5 Stars <small>with 0 Ratings</small></div>
     <h1 id="headingMain">Product Rating</h1>
     <div id="averageBlock" class="average-block hidden" aria-describedby="liveAnnouncer">
       <div id="avgStars" class="avg-stars" aria-hidden="true"></div>
