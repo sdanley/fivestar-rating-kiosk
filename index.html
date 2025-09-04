@@ -334,7 +334,7 @@ if('serviceWorker' in navigator){
 
   const last=localStorage.getItem('last-product-name'); if(!idParam){ idInputWrapper.classList.remove('hidden'); if(last) idInput.value=last; }
   if(idParam){ initId(idParam); }
-  startBtn.addEventListener('click',()=>{ const val=idInput.value.trim(); if(!val){flash('Enter a name.',true);return;} const url=new URL(location.href); url.searchParams.set('m',val); history.replaceState({},'',url.toString()); idInputWrapper.classList.add('hidden'); initId(val); });
+  startBtn.addEventListener('click',()=>{ const val=idInput.value.trim(); if(!val){flash('Enter a name.',true);return;} const url=new URL(location.href); url.searchParams.set('m',val); history.replaceState({},'',url.toString()); idInputWrapper.classList.add('hidden'); initId(val); if(statusDiv){ statusDiv.textContent=''; statusDiv.style.color='var(--muted)'; } });
 
   const kbdHint=document.getElementById('kbdHint'); let hintShown=false; function showHint(){ if(hintShown||!kbdHint) return; kbdHint.classList.remove('hidden'); hintShown=true; }
 
