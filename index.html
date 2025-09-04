@@ -19,6 +19,9 @@
     *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;height:100%;}
   body{min-height:100vh;min-height:100dvh;display:flex;justify-content:center;padding:1.3rem;touch-action:manipulation;overscroll-behavior:none;/* Use dynamic custom vh when set */min-height:var(--vh,100vh);padding:calc(1.3rem + env(safe-area-inset-top,0px)) calc(1.3rem + env(safe-area-inset-right,0px)) calc(1.3rem + env(safe-area-inset-bottom,0px)) calc(1.3rem + env(safe-area-inset-left,0px));}
+  /* iPad / iOS fill-available fallback to reduce Safari chrome flash */
+  html,body{height:-webkit-fill-available;}
+  @supports (-webkit-touch-callout:none){ body{min-height:-webkit-fill-available;} }
   html{overscroll-behavior:none}
     h1#headingMain{margin:.25rem 0 .55rem;font-weight:800;line-height:1.03;font-size:clamp(3rem,6vw,4.6rem);text-align:center;letter-spacing:.85px}
     .rating-text{margin:.25rem 0 0;text-align:center;font-size:clamp(1.05rem,1.4vw,1.3rem);font-weight:600;letter-spacing:.6px}
@@ -385,6 +388,18 @@ if('serviceWorker' in navigator){
   const kbdHint=document.getElementById('kbdHint'); let hintShown=false; function showHint(){ if(hintShown||!kbdHint) return; kbdHint.classList.remove('hidden'); hintShown=true; }
 
   const topBar=document.querySelector('.top-bar'); let hideTopTimer=null; function scheduleHide(){ if(!topBar) return; clearTimeout(hideTopTimer); hideTopTimer=setTimeout(()=>{ topBar.classList.add('autohide'); },2600);} function showTopBar(){ if(!topBar) return; const wasHidden=topBar.classList.contains('autohide'); topBar.classList.remove('autohide'); clearTimeout(hideTopTimer); hideTopTimer=setTimeout(()=>{ topBar.classList.add('autohide'); }, wasHidden?3200:2600); }
+  // Improved inactivity-based autohide for iPad kiosk
+  let inactivityTimer=null; const INACTIVITY_MS=3500; function resetInactivity(){ if(!topBar) return; clearTimeout(inactivityTimer); inactivityTimer=setTimeout(()=>{ // only hide if pointer not near top
+    if(window.__forceShowTopBar) return; // debug hook
+    topBar.classList.add('autohide');
+  },INACTIVITY_MS);} function userActivity(e){ if(e && e.clientY!=null && e.clientY<70){ showTopBar(); } else { // brief reveal on any interaction if currently hidden & near threshold
+    if(e && e.clientY!=null && e.clientY<140){ showTopBar(); }
+  } resetInactivity(); }
+  ['pointerdown','pointermove','touchstart','keydown'].forEach(ev=> document.addEventListener(ev,userActivity,{passive:true}));
+  window.addEventListener('orientationchange',()=>{ setTimeout(()=>{ resetInactivity(); scheduleHide(); },600); });
+  window.addEventListener('resize',()=>{ resetInactivity(); });
+  // Initial hide after load
+  window.addEventListener('load',()=>{ scheduleHide(); resetInactivity(); });
 
   document.addEventListener('pointerdown',e=>{ if(e.clientY<90){ showTopBar(); }});
   document.addEventListener('mousemove',e=>{ if(e.clientY<50){ showTopBar(); }});
