@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background (rounded for maskable safe area) -->
+  <rect x="0" y="0" width="512" height="512" rx="110" fill="#0f1113"/>
+  <!-- Star (scaled original 24x24 path, centered with 64px margin each side => scale 16) -->
+  <g transform="translate(64 64) scale(16)">
+    <path d="M12 2.4l2.9 6 6.6.9-4.9 4.8 1.2 6.6L12 17.9 6.2 20.7l1.2-6.6L2.5 9.3l6.6-.9L12 2.4z" fill="#ffcc33" stroke="#ffcc33" stroke-width="0.25"/>
+  </g>
+</svg>
