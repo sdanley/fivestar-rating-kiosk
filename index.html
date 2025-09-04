@@ -131,6 +131,7 @@ document.addEventListener('touchmove',e=>{ if(e.touches.length!==1) return; if(m
   <div class="panel" id="panel">
   <div id="netStatus" aria-live="polite" style="position:fixed;left:50%;top:8px;transform:translateX(-50%);background:#d13a3c;color:#fff;font-size:.75rem;padding:.4rem .7rem;border-radius:999px;letter-spacing:.5px;box-shadow:0 4px 14px -6px rgba(0,0,0,.5);display:none;z-index:50">OFFLINE</div>
   <div id="updateToast" style="position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--panel-alt);color:var(--text);font-size:.72rem;padding:.55rem .9rem;border:1px solid #2a3239;border-radius:999px;letter-spacing:.55px;display:none;z-index:60;box-shadow:0 6px 16px -8px rgba(0,0,0,.55);cursor:pointer">Update ready – tap to refresh</div>
+  <div id="verBadge" style="position:fixed;right:8px;bottom:8px;font-size:.55rem;font-weight:600;letter-spacing:.8px;padding:.3rem .5rem;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);border-radius:6px;color:var(--muted);z-index:40;pointer-events:none;opacity:.55">--</div>
     <div class="top-bar">
       <div class="bar-group" id="leftTools">
         <button class="icon-btn" id="themeToggle" aria-label="Toggle theme"></button>
@@ -360,6 +361,9 @@ if('serviceWorker' in navigator){
     if(evt.data && evt.data.type==='sw:activated'){
       if(updateToast){ updateToast.textContent='Updated'; updateToast.style.display='block'; setTimeout(()=>{updateToast.style.display='none';},1800); }
     }
+    if(evt.data && evt.data.type==='sw:version'){
+      const vb=document.getElementById('verBadge'); if(vb){ vb.textContent='VER '+evt.data.version; }
+    }
   });
   // If a waiting worker appears, prompt user
   if(navigator.serviceWorker){
@@ -369,6 +373,16 @@ if('serviceWorker' in navigator){
     });
   }
   function showUpdateToast(sw){ if(!updateToast) return; updateToast.style.display='block'; updateToast.onclick=()=>{ sw.postMessage('sw:update'); location.reload(); } }
+  // Request version from SW: handle first-load (Edge/Chromium) when page not yet controlled
+  (function(){
+    if(!('serviceWorker' in navigator)) return;
+    function ask(){ try{ navigator.serviceWorker.controller && navigator.serviceWorker.controller.postMessage('sw:get-version'); }catch{} }
+    if(navigator.serviceWorker.controller){ ask(); }
+    navigator.serviceWorker.ready.then(()=>ask());
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{ setTimeout(ask,60); });
+    // Fallback timeout: hide badge if still empty after 5s
+    setTimeout(()=>{ const vb=document.getElementById('verBadge'); if(vb && /^(--)?$/.test(vb.textContent.trim())) vb.style.opacity='.25'; },5000);
+  })();
 
   document.addEventListener('keydown',e=>{
     if(!currentId) return;

@@ -77,4 +77,10 @@ self.addEventListener('fetch', event => {
 // Allow page to trigger immediate skipWaiting
 self.addEventListener('message', e=>{
   if(e.data === 'sw:update'){ self.skipWaiting(); }
+  if(e.data === 'sw:get-version'){
+    // Reply with current version
+    self.clients.matchAll({includeUncontrolled:true}).then(list=>{
+      list.forEach(c=>c.postMessage({type:'sw:version',version:VERSION}));
+    });
+  }
 });
