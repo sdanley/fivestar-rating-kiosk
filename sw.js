@@ -11,6 +11,7 @@ const CORE_ASSETS = [
   '/icon-512.svg',
   '/icon-192.png',
   '/icon-512.png',
+  '/version.json',
   '/logo.svg'
 ];
 
