@@ -1,17 +1,18 @@
 // Service Worker: offline + kiosk enhancements
 // Increment version to invalidate old caches when app changes
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE_NAME = `rating-app-${VERSION}`;
 // Core assets for shell (add png icons for iOS install splash support)
 const CORE_ASSETS = [
   '/',
   '/index.html',
+  '/app.js',
+  '/styles.css',
   '/manifest.webmanifest',
   '/icon-192.svg',
   '/icon-512.svg',
   '/icon-192.png',
   '/icon-512.png',
-  '/version.json',
   '/logo.svg'
 ];
 
