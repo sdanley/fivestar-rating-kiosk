@@ -165,4 +165,37 @@
   window.addEventListener('online',()=>updateOnlineAdmin());window.addEventListener('offline',()=>updateOnlineAdmin());
   const avgObs=new MutationObserver(()=>{updateAdminStats();});avgObs.observe(avgLine,{childList:true,subtree:true});
   updateAdminStats();updateWakeUI();
+  // === Manual SW Update Check (appended) ===
+  (function(){
+    const checkUpdateBtn=document.getElementById('checkUpdate');
+    if(!checkUpdateBtn)return; if(checkUpdateBtn.dataset.enhanced)return; checkUpdateBtn.dataset.enhanced='1';
+    let lastKnownVersion=window.__appRevision||'';
+    navigator.serviceWorker?.addEventListener('message',evt=>{if(evt.data&&evt.data.type==='sw:version'){lastKnownVersion=evt.data.version;if(checkUpdateBtn.dataset.state==='checking'){checkUpdateBtn.textContent='Current '+lastKnownVersion;checkUpdateBtn.disabled=false;checkUpdateBtn.dataset.state='idle';}}});
+    function askVersion(){try{navigator.serviceWorker.controller&&navigator.serviceWorker.controller.postMessage('sw:get-version');}catch{}}
+    if(navigator.serviceWorker?.controller)askVersion();
+    checkUpdateBtn.addEventListener('click',async()=>{
+      if(!('serviceWorker' in navigator)){checkUpdateBtn.textContent='No SW';return;}
+      checkUpdateBtn.disabled=true;checkUpdateBtn.dataset.state='checking';checkUpdateBtn.textContent='Checking...';
+      const reg=await navigator.serviceWorker.getRegistration();
+      if(!reg){checkUpdateBtn.textContent='No Reg';checkUpdateBtn.disabled=false;checkUpdateBtn.dataset.state='idle';return;}
+      try{await reg.update();}catch{}
+      function handleWaiting(){
+        if(reg.waiting){
+          checkUpdateBtn.disabled=false;checkUpdateBtn.dataset.state='update-ready';checkUpdateBtn.textContent='Update Ready - Reload';
+          checkUpdateBtn.onclick=()=>{reg.waiting.postMessage('sw:update'); setTimeout(()=>location.reload(),120);};
+          return true;
+        }
+        return false;
+      }
+      if(handleWaiting())return;
+      if(reg.installing){reg.installing.addEventListener('statechange',()=>{handleWaiting();});}
+      if(navigator.serviceWorker.controller){askVersion();}
+      setTimeout(()=>{
+        if(checkUpdateBtn.dataset.state==='checking'){
+          checkUpdateBtn.textContent= lastKnownVersion?('Current '+lastKnownVersion):'No Update';
+          checkUpdateBtn.disabled=false;checkUpdateBtn.dataset.state='idle';
+        }
+      },950);
+    });
+  })();
 })();
