@@ -2,10 +2,14 @@
 (function(){
   const docEl=document.documentElement;
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  // Kiosk zoom suppression (moved from index.html): prevent pinch, ctrl+wheel, double-tap
+  window.addEventListener('wheel',e=>{ if(e.ctrlKey){ e.preventDefault(); } },{passive:false});
   if(isIOS){['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
     document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
     let lastTouchEnd=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<=400){e.preventDefault();}lastTouchEnd=now;},true);
   }
+  // Universal: prevent Ctrl+wheel (trackpad pinch zoom) for kiosk
+  window.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();}},{passive:false});
   document.addEventListener('contextmenu',e=>e.preventDefault(),{capture:true});
   document.body.classList.add('kiosk-no-select');
   try{history.replaceState({kiosk:true},'',location.href);history.pushState({kiosk:true},'',location.href);}catch{}

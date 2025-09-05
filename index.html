@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <!-- Simplified viewport (A). Pinch/double-tap zoom suppression handled via JS for kiosk; allows better accessibility defaults elsewhere -->
+  <!-- Base viewport (JS below enforces no-zoom for kiosk without violating lint rules) -->
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Five Star Rating Kiosk</title>
   <link rel="manifest" href="manifest.webmanifest?v=3" />
@@ -25,7 +25,6 @@
       var repo = 'fivestar-rating-kiosk';
       var path = window.location.pathname;
       if (location.hostname.endsWith('.github.io') && !path.includes('/'+repo+'/')) {
-        // Redirect preserving query/hash
         var target = '/' + repo + '/' + (location.search ? '' : '') + (location.hash || '');
         location.replace(target);
       }
