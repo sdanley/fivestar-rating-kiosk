@@ -1,6 +1,6 @@
 // Service Worker: offline + kiosk enhancements
 // Increment version to invalidate old caches when app changes
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE_NAME = `rating-app-${VERSION}`;
 // Core assets for shell (add png icons for iOS install splash support)
 // Use relative paths so it works when hosted under a subpath (e.g., GitHub Pages /repo-name/)
@@ -13,7 +13,8 @@ const CORE_ASSETS = [
   'icon-512.svg',
   'icon-192.png',
   'icon-512.png',
-  'logo.svg'
+  'logo.svg',
+  'logo-gray.svg'
 ];
 
 self.addEventListener('install', event => {
