@@ -1,6 +1,6 @@
 // Service Worker: offline + kiosk enhancements
 // Increment version to invalidate old caches when app changes
-const VERSION = 'v8';
+const VERSION = 'v9';
 const CACHE_NAME = `rating-app-${VERSION}`;
 // Core assets for shell (add png icons for iOS install splash support)
 // Use relative paths so it works when hosted under a subpath (e.g., GitHub Pages /repo-name/)

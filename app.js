@@ -4,31 +4,57 @@
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
   // Kiosk zoom suppression (moved from index.html): prevent pinch, ctrl+wheel, double-tap
   window.addEventListener('wheel',e=>{ if(e.ctrlKey){ e.preventDefault(); } },{passive:false});
-  if(isIOS){['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
-    document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
+  if(isIOS){
+    // Block native gesture events
+    ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+    // Block multi-touch start & move (pinch) early
+    document.addEventListener('touchstart',e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
+    document.addEventListener('touchmove',e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
+    // Pointer-based multi-touch suppression (covers iPadOS PointerEvents path)
+    (function(){
+      const active=new Set();
+      function clear(id){active.delete(id);}    
+      window.addEventListener('pointerdown',e=>{active.add(e.pointerId); if(active.size>1){ e.preventDefault(); }},{passive:false});
+      window.addEventListener('pointermove',e=>{ if(active.size>1){ e.preventDefault(); } },{passive:false});
+      window.addEventListener('pointerup',e=>clear(e.pointerId),{passive:true});
+      window.addEventListener('pointercancel',e=>clear(e.pointerId),{passive:true});
+      window.addEventListener('pointerout',e=>clear(e.pointerId),{passive:true});
+    })();
+    // Double‑tap zoom guard
     let lastTouchEnd=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<=400){e.preventDefault();}lastTouchEnd=now;},true);
-    // iOS orientation zoom mitigation
+    // Hard viewport lock & rotation zoom mitigation
     (function(){
       const vp=document.querySelector('meta[name=viewport]');
-      if(!vp)return;const base='width=device-width,initial-scale=1,viewport-fit=cover';
-      function setScale(scale){vp.setAttribute('content',base+',minimum-scale='+scale+',maximum-scale='+scale);}
-      // Lock on start
-      setScale(1);
-      let lastW=window.innerWidth,lastH=window.innerHeight;
+      if(!vp)return;
+      const BASE='width=device-width,initial-scale=1,viewport-fit=cover';
+      function hardLock(){
+        vp.setAttribute('content', BASE+',maximum-scale=1,minimum-scale=1,user-scalable=no');
+      }
+      function softUnlock(){
+        // Slight wiggle to defeat iOS auto text zoom heuristics then relock
+        vp.setAttribute('content', BASE+',maximum-scale=1.001,minimum-scale=0.999,user-scalable=no');
+      }
+      // Initial enforced lock (repeat a few times to override late Safari adjustments)
+      hardLock();[60,120,240,400,650,900].forEach(t=>setTimeout(hardLock,t));
+      // Orientation: briefly unlock then relock
       window.addEventListener('orientationchange',()=>{
-        // Temporarily loosen then relock to squash iOS text auto-zoom
-        vp.setAttribute('content',base+',minimum-scale=0.999,maximum-scale=1.001');
-        setTimeout(()=>{setScale(1);lastW=window.innerWidth;lastH=window.innerHeight;},320);
+        softUnlock();
+        // Multiple relocks to catch delayed adjustments
+        [80,160,240,320,480,640,900].forEach(t=>setTimeout(hardLock,t));
       },{passive:true});
-      window.addEventListener('resize',()=>{
-        // If iOS applied a latent zoom (detected by visualViewport scale) force reset
-        const vv=window.visualViewport; if(vv && Math.abs(vv.scale-1)>0.02){ setScale(1); }
-        lastW=window.innerWidth; lastH=window.innerHeight;
-      },{passive:true});
+      // Visual viewport scale watcher
+      if(window.visualViewport){
+        const vv=window.visualViewport;
+        vv.addEventListener('resize',()=>{
+          if(Math.abs(vv.scale-1)>0.005){ hardLock(); }
+        },{passive:true});
+      }
+      // Fallback periodic guard (lightweight)
+      let guardRuns=0;const guard=setInterval(()=>{guardRuns++;hardLock();if(guardRuns>12)clearInterval(guard);},2500);
+      document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') hardLock(); });
     })();
   }
-  // Universal: prevent Ctrl+wheel (trackpad pinch zoom) for kiosk
-  window.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();}},{passive:false});
+  // (stray brace & duplicate wheel listener removed)
   document.addEventListener('contextmenu',e=>e.preventDefault(),{capture:true});
   document.body.classList.add('kiosk-no-select');
   try{history.replaceState({kiosk:true},'',location.href);history.pushState({kiosk:true},'',location.href);}catch{}
