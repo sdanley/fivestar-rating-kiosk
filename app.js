@@ -2,6 +2,14 @@
 (function(){
   const docEl=document.documentElement;
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  // Global CAPTURE phase multi-touch guard (extra layer if default listeners race)
+  ['touchstart','touchmove'].forEach(t=>{
+    window.addEventListener(t,e=>{ if(e.touches && e.touches.length>1){ e.preventDefault(); } },{passive:false,capture:true});
+  });
+  // Pointer capture phase guard (covers some iPadOS edge cases)
+  ['pointerdown','pointermove'].forEach(t=>{
+    window.addEventListener(t,e=>{ if(e.pointerType==='touch' && e.isPrimary===false){ e.preventDefault(); } },{passive:false,capture:true});
+  });
   // Kiosk zoom suppression (moved from index.html): prevent pinch, ctrl+wheel, double-tap
   window.addEventListener('wheel',e=>{ if(e.ctrlKey){ e.preventDefault(); } },{passive:false});
   if(isIOS){
@@ -178,24 +186,46 @@
       checkUpdateBtn.disabled=true;checkUpdateBtn.dataset.state='checking';checkUpdateBtn.textContent='Checking...';
       const reg=await navigator.serviceWorker.getRegistration();
       if(!reg){checkUpdateBtn.textContent='No Reg';checkUpdateBtn.disabled=false;checkUpdateBtn.dataset.state='idle';return;}
-      try{await reg.update();}catch{}
-      function handleWaiting(){
+      let handled=false;
+      function markReady(){
+        if(handled)return;
         if(reg.waiting){
-          checkUpdateBtn.disabled=false;checkUpdateBtn.dataset.state='update-ready';checkUpdateBtn.textContent='Update Ready - Reload';
-          checkUpdateBtn.onclick=()=>{reg.waiting.postMessage('sw:update'); setTimeout(()=>location.reload(),120);};
-          return true;
+          handled=true;
+          checkUpdateBtn.disabled=false;
+          checkUpdateBtn.dataset.state='update-ready';
+          checkUpdateBtn.textContent='Update Ready - Reload';
+          checkUpdateBtn.removeEventListener('click',noopDuringCheck);
+          checkUpdateBtn.addEventListener('click',doReload,{once:true});
         }
-        return false;
       }
-      if(handleWaiting())return;
-      if(reg.installing){reg.installing.addEventListener('statechange',()=>{handleWaiting();});}
-      if(navigator.serviceWorker.controller){askVersion();}
-      setTimeout(()=>{
-        if(checkUpdateBtn.dataset.state==='checking'){
-          checkUpdateBtn.textContent= lastKnownVersion?('Current '+lastKnownVersion):'No Update';
-          checkUpdateBtn.disabled=false;checkUpdateBtn.dataset.state='idle';
-        }
-      },950);
+      function doReload(){
+        try{reg.waiting && reg.waiting.postMessage('sw:update');}catch{}
+        setTimeout(()=>location.reload(),120);
+      }
+      function noopDuringCheck(e){ e.preventDefault(); }
+      checkUpdateBtn.addEventListener('click',noopDuringCheck);
+      // Listen for updatefound BEFORE triggering update to catch races
+      const ufHandler=()=>{
+        const nw=reg.installing; if(!nw) return;
+        nw.addEventListener('statechange',()=>{ if(nw.state==='installed'){ markReady(); } });
+      };
+      reg.addEventListener('updatefound',ufHandler,{once:false});
+      try{await reg.update();}catch{}
+      // Immediate check in case waiting already present
+      markReady();
+      if(!handled){
+        // Ask for version to display while waiting/if none
+        if(navigator.serviceWorker.controller){ askVersion(); }
+        // Fallback: after delay, if still no update mark current
+        setTimeout(()=>{
+          if(!handled && checkUpdateBtn.dataset.state==='checking'){
+            checkUpdateBtn.textContent= lastKnownVersion?('Current '+lastKnownVersion):'No Update';
+            checkUpdateBtn.dataset.state='idle';
+            checkUpdateBtn.disabled=false;
+            checkUpdateBtn.removeEventListener('click',noopDuringCheck);
+          }
+        },1400);
+      }
     });
   })();
 })();
