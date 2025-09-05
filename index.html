@@ -32,7 +32,7 @@
     // iOS aggressive viewport lock (kept out of meta for validator compliance)
     (function(){
       var ua=navigator.userAgent;
-      if(!/iPad|iPhone|iPod/.test(ua)) return;
+      if(!(/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>1))) return;
       var vp=document.querySelector('meta[name=viewport]');
       if(!vp) return;
       var BASE='width=device-width,initial-scale=1,viewport-fit=cover';

@@ -1,7 +1,9 @@
 // Consolidated kiosk application script
 (function(){
   const docEl=document.documentElement;
-  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  const ua=navigator.userAgent;
+  // Include iPadOS (desktop-class Safari identifies as Macintosh with touch points)
+  const isIOS=/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>1);
   // Global CAPTURE phase multi-touch guard (extra layer if default listeners race)
   ['touchstart','touchmove'].forEach(t=>{
     window.addEventListener(t,e=>{ if(e.touches && e.touches.length>1){ e.preventDefault(); } },{passive:false,capture:true});
@@ -75,7 +77,7 @@
   let ticking=false;function scheduleVH(){if(ticking)return;ticking=true;requestAnimationFrame(()=>{ticking=false;applyVH();});}
   applyVH();['resize','orientationchange'].forEach(ev=>window.addEventListener(ev,()=>{setTimeout(scheduleVH,ev==='orientationchange'?250:40);},{passive:true}));
   if(window.visualViewport){visualViewport.addEventListener('resize',()=>setTimeout(scheduleVH,35));}
-  const ua=navigator.userAgent;const isiPad=/iPad/.test(ua)||( /(Macintosh).*Version\/.*Safari/.test(ua)&&navigator.maxTouchPoints>1);
+  const isiPad=/iPad/.test(ua)||( /(Macintosh).*Version\/.*Safari/.test(ua)&&navigator.maxTouchPoints>1);
   if(isiPad){docEl.classList.add('ios-tablet','full-bleed');[300,900,1600,3000].forEach(t=>setTimeout(applyVH,t));let last=rawVH();setInterval(()=>{const cur=rawVH();if(Math.abs(cur-last)>25){last=cur;applyVH();}},3500);}    
   function enforceVH(){const h=rawVH();if(h>0){docEl.style.setProperty('--vh',h+'px');document.body.style.height='var(--vh)';}}
   ['resize','orientationchange'].forEach(e=>window.addEventListener(e,()=>setTimeout(enforceVH,e==='orientationchange'?300:60),{passive:true}));
