@@ -32,7 +32,9 @@ html { -webkit-text-size-adjust:100%; }
 }
 * { box-sizing: border-box }
 html,body { margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; height:100%; -webkit-user-select:none; }
-body { min-height:100vh; min-height:100dvh; display:flex; justify-content:center; align-items:stretch; padding:1.3rem; touch-action:manipulation; overscroll-behavior:none; height:var(--vh,100vh); padding:calc(1.3rem + env(safe-area-inset-top,0px)) calc(1.3rem + env(safe-area-inset-right,0px)) calc(1.3rem + env(safe-area-inset-bottom,0px)) calc(1.3rem + env(safe-area-inset-left,0px)); }
+body { min-height:100vh; min-height:100dvh; display:flex; justify-content:center; align-items:stretch; padding:1.3rem; touch-action:none; overscroll-behavior:none; height:var(--vh,100vh); padding:calc(1.3rem + env(safe-area-inset-top,0px)) calc(1.3rem + env(safe-area-inset-right,0px)) calc(1.3rem + env(safe-area-inset-bottom,0px)) calc(1.3rem + env(safe-area-inset-left,0px)); }
+/* Re-enable needed tap gestures inside inputs/buttons */
+input, button { touch-action:manipulation; }
 html,body { height:-webkit-fill-available; }
 @supports (-webkit-touch-callout:none){ body{ min-height:-webkit-fill-available; } }
 html { overscroll-behavior:none }
