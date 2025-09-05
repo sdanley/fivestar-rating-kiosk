@@ -31,7 +31,7 @@ html { -webkit-text-size-adjust:100%; }
   --outline: #5a6672;
 }
 * { box-sizing: border-box }
-html,body { margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; height:100%; }
+html,body { margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; height:100%; -webkit-user-select:none; }
 body { min-height:100vh; min-height:100dvh; display:flex; justify-content:center; align-items:stretch; padding:1.3rem; touch-action:manipulation; overscroll-behavior:none; height:var(--vh,100vh); padding:calc(1.3rem + env(safe-area-inset-top,0px)) calc(1.3rem + env(safe-area-inset-right,0px)) calc(1.3rem + env(safe-area-inset-bottom,0px)) calc(1.3rem + env(safe-area-inset-left,0px)); }
 html,body { height:-webkit-fill-available; }
 @supports (-webkit-touch-callout:none){ body{ min-height:-webkit-fill-available; } }
@@ -69,9 +69,9 @@ svg.star { width:var(--star-size); height:var(--star-size); display:block; overf
 .star-fill { opacity:0; transition:opacity .22s }
 .star-fill use { fill:var(--accent); stroke:var(--accent); stroke-width:0 }
 .input-row { display:flex; flex-direction:column; gap:.7rem; max-width:520px; margin:1.6rem auto 0; text-align:center }
-.input-row input { background:var(--panel-alt); border:2px solid #273039; color:var(--text); padding:.95rem 1.15rem; font-size:1.3rem; border-radius:26px; text-align:center; letter-spacing:.55px; font-weight:600 }
+.input-row input { background:var(--panel-alt); border:2px solid #273039; color:var(--text); padding:.95rem 1.15rem; font-size:1.35rem; border-radius:26px; text-align:center; letter-spacing:.55px; font-weight:600; -webkit-user-select:text; user-select:text }
 .input-row input:focus { outline:none; box-shadow:var(--focus); border-color:var(--accent) }
-.input-row button { background:var(--accent); color:#222; font-size:1.05rem; font-weight:650; padding:.95rem 1.3rem; border:none; border-radius:999px; cursor:pointer; letter-spacing:.6px; box-shadow:0 6px 18px -6px rgba(0,0,0,.55) }
+.input-row button { background:var(--accent); color:#222; font-size:1.1rem; font-weight:650; padding:.95rem 1.3rem; border:none; border-radius:999px; cursor:pointer; letter-spacing:.6px; box-shadow:0 6px 18px -6px rgba(0,0,0,.55) }
 .icon-btn { width:56px; height:56px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:var(--panel-alt); border:2px solid #22292f; cursor:pointer; transition:background .3s,transform .25s; color:var(--text); }
 .icon-btn svg { width:28px; height:28px; display:block; pointer-events:none; }
 .notice { text-align:center; margin-top:.1rem; font-size:.6rem; color:var(--muted); letter-spacing:.35px }

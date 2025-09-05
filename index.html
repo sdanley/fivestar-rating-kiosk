@@ -29,6 +29,17 @@
         location.replace(target);
       }
     })();
+    // iOS aggressive viewport lock (kept out of meta for validator compliance)
+    (function(){
+      var ua=navigator.userAgent;
+      if(!/iPad|iPhone|iPod/.test(ua)) return;
+      var vp=document.querySelector('meta[name=viewport]');
+      if(!vp) return;
+      var BASE='width=device-width,initial-scale=1,viewport-fit=cover';
+      function lock(){vp.setAttribute('content',BASE+',maximum-scale=1');}
+      lock();[80,160,320,640].forEach(function(t){setTimeout(lock,t);});
+      window.addEventListener('orientationchange',function(){setTimeout(lock,140);setTimeout(lock,400);});
+    })();
   </script>
 </head>
 
