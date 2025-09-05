@@ -6,7 +6,7 @@
   <!-- Simplified viewport (A). Pinch/double-tap zoom suppression handled via JS for kiosk; allows better accessibility defaults elsewhere -->
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Five Star Rating Kiosk</title>
-  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="manifest" href="manifest.webmanifest?v=2" />
   <link rel="icon" href="icon-192.png" sizes="192x192" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <!-- iOS PWA essentials -->
@@ -19,6 +19,18 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png" />
   <meta name="theme-color" content="#0f1113" />
   <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Ensure correct subpath when hosted on GitHub Pages (avoids 404 in iOS standalone)
+    (function(){
+      var repo = 'fivestar-rating-kiosk';
+      var path = window.location.pathname;
+      if (location.hostname.endsWith('.github.io') && !path.includes('/'+repo+'/')) {
+        // Redirect preserving query/hash
+        var target = '/' + repo + '/' + (location.search ? '' : '') + (location.hash || '');
+        location.replace(target);
+      }
+    })();
+  </script>
 </head>
 
 <body>
