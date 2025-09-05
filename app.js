@@ -111,15 +111,65 @@
   function loadAgg(id){try{const raw=localStorage.getItem(storageKey(id));if(!raw)return{count:0,total:0,buckets:[0,0,0,0,0]};const p=JSON.parse(raw);if(!Array.isArray(p.buckets)||p.buckets.length!==5)p.buckets=[0,0,0,0,0];if(typeof p.count!== 'number'||typeof p.total!=='number')return{count:0,total:0,buckets:[0,0,0,0,0]};return p;}catch{return{count:0,total:0,buckets:[0,0,0,0,0]};}}
   function saveAgg(id,a){localStorage.setItem(storageKey(id),JSON.stringify(a))}
   function record(id,stars){const a=loadAgg(id);a.count++;a.total+=stars;a.buckets[stars-1]++;saveAgg(id,a);return a;}
+  // ---- Persistent Backup (IndexedDB) ----
+  const PERSIST_DB='kioskRatings';
+  let idbReady=null; let lastBackup=0; const BACKUP_INTERVAL=120000; // 2 min
+  function openIDB(){
+    if(idbReady) return idbReady;
+    idbReady=new Promise((resolve,reject)=>{
+      if(!('indexedDB' in window)) return reject('no indexedDB');
+      const req=indexedDB.open(PERSIST_DB,1);
+      req.onupgradeneeded=()=>{const db=req.result; if(!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');};
+      req.onsuccess=()=>resolve(req.result);
+      req.onerror=()=>reject(req.error);
+    });
+    return idbReady;
+  }
+  function gatherSnapshot(){const snap={};for(const k of Object.keys(localStorage)){if(k.startsWith('rating:mattress:')){snap[k]=localStorage.getItem(k);}}return snap;}
+  async function backupSnapshot(force){const now=Date.now(); if(!force && now-lastBackup<BACKUP_INTERVAL) return; lastBackup=now; try{const db=await openIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put({ts:Date.now(),data:gatherSnapshot()},'snapshot');}catch{}}
+  async function reconcileBackup(){
+    try{
+      const db=await openIDB();
+      const tx=db.transaction('kv','readonly');
+      const getReq=tx.objectStore('kv').get('snapshot');
+      getReq.onsuccess=()=>{
+        const val=getReq.result;
+        if(!val||!val.data) return;
+        let added=0;
+        Object.entries(val.data).forEach(([k,v])=>{
+          if(k.startsWith('rating:mattress:') && localStorage.getItem(k)==null){
+            localStorage.setItem(k,v);
+            added++;
+          }
+        });
+        if(added){
+          if(typeof console!=='undefined') console.log('[restore] added',added,'rating keys from snapshot');
+          try{window.dispatchEvent(new CustomEvent('ratings-restored',{detail:{added}}));}catch{}
+        }
+      };
+    }catch{}
+  }
+  // Ensure DB created even if we already have data; force initial snapshot shortly after load
+  openIDB().then(()=>setTimeout(()=>backupSnapshot(true),1500)).catch(()=>{});
+  // Periodic background backup (in case of long idle kiosk usage without new ratings)
+  setInterval(()=>backupSnapshot(), BACKUP_INTERVAL);
+  // Request persistent storage quota (best effort)
+  if(navigator.storage && navigator.storage.persist){navigator.storage.persisted().then(p=>{ if(!p){ navigator.storage.persist().catch(()=>{}); } });}
   function fmtAvg(c,t){if(c===0)return{txt:'--',v:0};const v=t/c;return{txt:v.toFixed(2).replace(/\.00$/, '').replace(/(\.[0-9])0$/, '$1'),v};}
   function buildStars(){starsContainer.innerHTML='';for(let i=1;i<=STAR_COUNT;i++){const b=document.createElement('button');b.className='star-btn';b.type='button';b.setAttribute('data-star',String(i));b.setAttribute('role','radio');b.setAttribute('aria-label',`${i} star${i>1?'s':''}`);b.setAttribute('aria-checked','false');b.addEventListener('pointerenter',()=>{hoverVal=i;paintStars();});b.addEventListener('pointerleave',()=>{hoverVal=0;paintStars();});b.addEventListener('click',()=>{if(!currentId){flash('Enter a name first.',true);return;}commitRating(i);});const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('star');const gBase=document.createElementNS('http://www.w3.org/2000/svg','g');gBase.classList.add('star-base');const baseUse=document.createElementNS('http://www.w3.org/2000/svg','use');baseUse.setAttribute('href','#star-shape');gBase.appendChild(baseUse);const gFill=document.createElementNS('http://www.w3.org/2000/svg','g');gFill.classList.add('star-fill');const fillUse=document.createElementNS('http://www.w3.org/2000/svg','use');fillUse.setAttribute('href','#star-shape');gFill.appendChild(fillUse);svg.append(gBase,gFill);b.append(svg);starsContainer.append(b);}}
   function commitRating(val){selected=val;pending=0;const agg=record(currentId,val);flash('Saved!',false);updateUI(agg);setTimeout(()=>{selected=0;paintStars();},2600);paintStars();if(kbdHint){kbdHint.classList.add('hidden');}}
+  // Wrap commitRating to also trigger backup
+  const _origCommit=commitRating; commitRating=function(val){_origCommit(val); backupSnapshot();};
   function paintStars(){[...starsContainer.children].forEach((b,idx)=>{const star=idx+1;const fill=b.querySelector('.star-fill');const active=(hoverVal?star<=hoverVal:(pending?star<=pending:(selected&&star<=selected)));if(fill)fill.style.opacity=active?'1':'0';b.classList.toggle('on',selected&&star<=selected);b.classList.toggle('pending',pending&&star<=pending&&!selected);b.setAttribute('aria-checked',selected===star?'true':'false');if(pending===star&&!selected)b.setAttribute('aria-checked','true');});}
   let fractionalRenderRun=0;function renderFractional(v){avgStars.innerHTML='';fractionalRenderRun++;const run=fractionalRenderRun;for(let i=1;i<=STAR_COUNT;i++){const frac=Math.min(Math.max(v-(i-1),0),1);const wrap=document.createElement('div');wrap.className='fraction-wrap';wrap.dataset.frac=String(frac);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');if(frac<=0){svg.innerHTML=`<use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use>`;}else if(frac>=1){svg.innerHTML=`<use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use>`;}else{const fw=(24*frac).toFixed(3);const cf=`clipF_${run}_${i}`;svg.innerHTML=`<defs><clipPath id='${cf}'><rect width='${fw}' height='24'></rect></clipPath></defs><use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use><g clip-path='url(#${cf})'><use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use></g>`;}wrap.append(svg);avgStars.append(wrap);}}
   function updateUI(agg){const {txt,v}=fmtAvg(agg.count,agg.total);heading.textContent=currentId;subtitle.classList.add('hidden');yourLabel.classList.remove('hidden');const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);averageBlock.classList.remove('hidden');starsContainer.classList.remove('hidden');document.querySelector('.panel')?.classList.add('rating-active');liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';}
   function flash(msg,err){if(statusDiv){statusDiv.textContent=msg;statusDiv.style.color=err?'var(--danger)':'var(--accent)';if(!err)setTimeout(()=>{if(statusDiv.textContent===msg)statusDiv.textContent='';},2000);}if(liveAnnouncer){liveAnnouncer.textContent=msg;}}
   function initId(id){currentId=id;localStorage.setItem('last-product-name',id);buildStars();updateUI(loadAgg(id));paintStars();}
   const last=localStorage.getItem('last-product-name');if(!idParam){idInputWrapper.classList.remove('hidden');if(last)idInput.value=last;}if(idParam){initId(idParam);}startBtn.addEventListener('click',()=>{const val=idInput.value.trim();if(!val){flash('Enter a name.',true);return;}const url=new URL(location.href);url.searchParams.set('m',val);history.replaceState({},'',url.toString());idInputWrapper.classList.add('hidden');initId(val);if(statusDiv){statusDiv.textContent='';statusDiv.style.color='var(--muted)';}});
+  // Listen for restored ratings and refresh UI if current product matches
+  window.addEventListener('ratings-restored',()=>{ if(currentId){ updateUI(loadAgg(currentId)); paintStars(); } updateAdminStats(); });
+  // Perform reconcile after listeners & potential init so UI can refresh immediately
+  reconcileBackup();
   const kbdHint=document.getElementById('kbdHint');let hintShown=false;function showHint(){if(hintShown||!kbdHint)return;kbdHint.classList.remove('hidden');hintShown=true;}
   const topBar=document.querySelector('.top-bar');let hideTopTimer=null;function scheduleHide(){if(!topBar)return;clearTimeout(hideTopTimer);hideTopTimer=setTimeout(()=>{topBar.classList.add('autohide');},2600);}function showTopBar(){if(!topBar)return;const wasHidden=topBar.classList.contains('autohide');topBar.classList.remove('autohide');clearTimeout(hideTopTimer);hideTopTimer=setTimeout(()=>{topBar.classList.add('autohide');},wasHidden?3200:2600);}let inactivityTimer=null;const INACTIVITY_MS=3500;function resetInactivity(){if(!topBar)return;clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{if(window.__forceShowTopBar)return;topBar.classList.add('autohide');},INACTIVITY_MS);}function userActivity(e){if(e&&e.clientY!=null&&e.clientY<70){showTopBar();}else{if(e&&e.clientY!=null&&e.clientY<140){showTopBar();}}resetInactivity();}[ 'pointerdown','pointermove','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,userActivity,{passive:true}));window.addEventListener('orientationchange',()=>{setTimeout(()=>{resetInactivity();scheduleHide();},600);});window.addEventListener('resize',()=>{resetInactivity();});window.addEventListener('load',()=>{scheduleHide();resetInactivity();});document.addEventListener('pointerdown',e=>{if(e.clientY<90){showTopBar();}});document.addEventListener('mousemove',e=>{if(e.clientY<50){showTopBar();}});topBar?.addEventListener('pointerenter',()=>{clearTimeout(hideTopTimer);});topBar?.addEventListener('pointerleave',()=>{scheduleHide();});themeToggle.addEventListener('focus',showTopBar);fsToggle.addEventListener('focus',showTopBar);themeToggle.addEventListener('blur',scheduleHide);fsToggle.addEventListener('blur',scheduleHide);document.addEventListener('keydown',e=>{if(e.key==='Escape'){showTopBar();}});
   const netStatus=document.getElementById('netStatus');function updateOnline(){if(!netStatus)return;if(navigator.onLine){netStatus.style.display='none';}else{netStatus.style.display='block';}}window.addEventListener('online',updateOnline);window.addEventListener('offline',updateOnline);updateOnline();
@@ -144,6 +194,11 @@
   const adminOnline=document.getElementById('adminOnline');
   const adminStats=document.getElementById('adminStats');
   const diagToggle=document.getElementById('diagToggle');
+  const adminLastBackup=document.getElementById('adminLastBackup');
+  const adminSnapshotCount=document.getElementById('adminSnapshotCount');
+  const adminPersistent=document.getElementById('adminPersistent');
+  const backupNowBtn=document.getElementById('backupNow');
+  const exportBtn=document.getElementById('exportData');
   const clearBtn=document.getElementById('clearData');
   const adminClose=document.querySelector('.admin-close');
   let wakeLockObj=null; let wakeRequested=false; let adminTapTimes=[]; let hotspotPressTimer=null; const HOT_CORNER_PX=70; let fallbackVideo=null; let fallbackActive=false;
@@ -175,6 +230,40 @@
   window.addEventListener('online',()=>updateOnlineAdmin());window.addEventListener('offline',()=>updateOnlineAdmin());
   const avgObs=new MutationObserver(()=>{updateAdminStats();});avgObs.observe(avgLine,{childList:true,subtree:true});
   updateAdminStats();updateWakeUI();
+  // ---- Admin backup status helpers ----
+  let persistGranted=null;
+  if(navigator.storage && navigator.storage.persisted){navigator.storage.persisted().then(p=>{persistGranted=p;refreshBackupMeta();});}
+  function snapshotMeta(){
+    return openIDB()
+      .then(db=>new Promise(res=>{
+        try {
+          const tx=db.transaction('kv','readonly');
+          const g=tx.objectStore('kv').get('snapshot');
+          g.onsuccess=()=>{
+            if(!g.result){
+              res({count:0,ts:null});
+            } else {
+              const d=g.result.data||{};
+              res({count:Object.keys(d).length,ts:g.result.ts||null});
+            }
+          };
+          g.onerror=()=>res({count:0,ts:null});
+        } catch {
+          res({count:0,ts:null});
+        }
+      }))
+      .catch(()=>({count:0,ts:null}));
+  }
+  function fmtTs(ts){if(!ts)return'--';try{return new Date(ts).toLocaleTimeString();}catch{return String(ts);} }
+  async function refreshBackupMeta(){try{const meta=await snapshotMeta();if(adminSnapshotCount)adminSnapshotCount.textContent=String(meta.count);if(adminLastBackup)adminLastBackup.textContent=fmtTs(meta.ts);if(adminPersistent)adminPersistent.textContent=persistGranted===null?'…':(persistGranted?'Yes':'No');}catch{}}
+  // Refresh when admin opens
+  const _openAdminRef=openAdmin; openAdmin=function(){_openAdminRef(); refreshBackupMeta();};
+  backupNowBtn?.addEventListener('click',()=>{backupSnapshot(true).then(()=>{refreshBackupMeta();});});
+  exportBtn?.addEventListener('click',async()=>{
+    try{const snap= gatherSnapshot();const blob=new Blob([JSON.stringify({exported:Date.now(),data:snap},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='kiosk-ratings-export.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},100);}catch(e){alert('Export failed');}}
+  );
+  // Periodic meta refresh every 3 minutes while page active
+  setInterval(()=>{if(!document.hidden)refreshBackupMeta();},180000);
   // === Manual SW Update Check (appended) ===
   (function(){
     const checkUpdateBtn=document.getElementById('checkUpdate');
