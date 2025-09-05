@@ -1,19 +1,19 @@
 // Service Worker: offline + kiosk enhancements
 // Increment version to invalidate old caches when app changes
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE_NAME = `rating-app-${VERSION}`;
 // Core assets for shell (add png icons for iOS install splash support)
+// Use relative paths so it works when hosted under a subpath (e.g., GitHub Pages /repo-name/)
 const CORE_ASSETS = [
-  '/',
-  '/index.html',
-  '/app.js',
-  '/styles.css',
-  '/manifest.webmanifest',
-  '/icon-192.svg',
-  '/icon-512.svg',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/logo.svg'
+  'index.html',
+  'app.js',
+  'styles.css',
+  'manifest.webmanifest',
+  'icon-192.svg',
+  'icon-512.svg',
+  'icon-192.png',
+  'icon-512.png',
+  'logo.svg'
 ];
 
 self.addEventListener('install', event => {
@@ -21,7 +21,7 @@ self.addEventListener('install', event => {
     const cache=await caches.open(CACHE_NAME);
     try { await cache.addAll(CORE_ASSETS); } catch(e){ /* ignore individual failure */ }
     // Warm navigation fallback: ensure index stored
-    try { const res=await fetch('/index.html',{cache:'no-store'}); await cache.put('/index.html',res.clone()); } catch{}
+  try { const res=await fetch('index.html',{cache:'no-store'}); await cache.put('index.html',res.clone()); } catch{}
   })().then(()=>self.skipWaiting()));
 });
 
@@ -45,14 +45,14 @@ self.addEventListener('fetch', event => {
   if (req.mode === 'navigate') {
     event.respondWith((async()=>{
       try {
-        const netRes = await fetch(req);
-        // Update cached shell asynchronously
-        const cache = await caches.open(CACHE_NAME);
-        cache.put('/index.html', netRes.clone());
-        return netRes;
+  const netRes = await fetch(req);
+  const cache = await caches.open(CACHE_NAME);
+  // Normalize to 'index.html' so cached key matches CORE_ASSETS
+  const shell = await fetch('index.html',{cache:'no-store'}).catch(()=>null);
+  if(shell) cache.put('index.html', shell.clone());
+  return netRes;
       } catch {
-        // offline fallback
-        const cacheHit = await caches.match('/index.html');
+  const cacheHit = await caches.match('index.html');
         return cacheHit || new Response('<!doctype html><title>Offline</title><h1>Offline</h1><p>Content unavailable.</p>',{headers:{'Content-Type':'text/html'}});
       }
     })());
