@@ -7,6 +7,25 @@
   if(isIOS){['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
     document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault();},{passive:false});
     let lastTouchEnd=0;document.addEventListener('touchend',e=>{const now=Date.now();if(now-lastTouchEnd<=400){e.preventDefault();}lastTouchEnd=now;},true);
+    // iOS orientation zoom mitigation
+    (function(){
+      const vp=document.querySelector('meta[name=viewport]');
+      if(!vp)return;const base='width=device-width,initial-scale=1,viewport-fit=cover';
+      function setScale(scale){vp.setAttribute('content',base+',minimum-scale='+scale+',maximum-scale='+scale);}
+      // Lock on start
+      setScale(1);
+      let lastW=window.innerWidth,lastH=window.innerHeight;
+      window.addEventListener('orientationchange',()=>{
+        // Temporarily loosen then relock to squash iOS text auto-zoom
+        vp.setAttribute('content',base+',minimum-scale=0.999,maximum-scale=1.001');
+        setTimeout(()=>{setScale(1);lastW=window.innerWidth;lastH=window.innerHeight;},320);
+      },{passive:true});
+      window.addEventListener('resize',()=>{
+        // If iOS applied a latent zoom (detected by visualViewport scale) force reset
+        const vv=window.visualViewport; if(vv && Math.abs(vv.scale-1)>0.02){ setScale(1); }
+        lastW=window.innerWidth; lastH=window.innerHeight;
+      },{passive:true});
+    })();
   }
   // Universal: prevent Ctrl+wheel (trackpad pinch zoom) for kiosk
   window.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();}},{passive:false});
@@ -27,7 +46,6 @@
   function enforceVH(){const h=rawVH();if(h>0){docEl.style.setProperty('--vh',h+'px');document.body.style.height='var(--vh)';}}
   ['resize','orientationchange'].forEach(e=>window.addEventListener(e,()=>setTimeout(enforceVH,e==='orientationchange'?300:60),{passive:true}));
   if(window.visualViewport)visualViewport.addEventListener('resize',()=>setTimeout(enforceVH,40));
-  // Removed version.json bootstrap fetch (SW now provides version via message)
   if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('SW reg failed',e));}
   const themeToggle=document.getElementById('themeToggle');
   const fsToggle=document.getElementById('fsToggle');
