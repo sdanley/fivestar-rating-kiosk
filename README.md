@@ -144,7 +144,7 @@ To change the product being rated:
 | Basic Ratings | ✅ | ✅ | ✅ | ✅ |
 | Service Worker | ✅ | ✅ | ✅ | ✅ |
 | PWA Install | ✅ | ✅ | ✅ | ⚠️ |
-| Wake Lock | Fallback | ✅ | ✅ | ❌ |
+| Wake Lock | Fallback | ✅ | ✅ | ⚠️ |
 | Fullscreen | ✅ | ✅ | ✅ | ✅ |
 
 *✅ = Full Support, ⚠️ = Partial Support, ❌ = Not Supported*
@@ -193,7 +193,7 @@ fivestar-rating-kiosk/
 ```
 
 ### Service Worker:
-- Cache version: Defined in `sw.js` (currently v13)
+- Cache version: Defined in `sw.js` as `VERSION` constant
 - Update `VERSION` constant to invalidate cache
 - Offline-first strategy for all assets
 - Automatic cache cleanup on activation
