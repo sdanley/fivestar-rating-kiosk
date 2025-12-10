@@ -201,8 +201,9 @@ fivestar-rating-kiosk/
 - Automatic cache cleanup on activation
 
 ### Version Updates:
-1. Update `version.json` with new version number
-2. Update `VERSION` constant in `sw.js` to match
+1. Update `version.json` with new semantic version (e.g., "1.0.20")
+2. Update `VERSION` constant in `sw.js` for cache invalidation (e.g., 'v14')
+   - Note: These version numbers serve different purposes and don't need to match
 3. Deploy changes
 4. Users can check for updates in admin panel
 
@@ -210,7 +211,7 @@ fivestar-rating-kiosk/
 - **Colors**: Edit CSS custom properties in `styles.css`
 - **Branding**: Replace `logo.svg` and `logo-gray.svg`
 - **Icons**: Replace icon files (maintain sizes: 192x192, 512x512)
-- **Storage Key**: Modify `storageKey()` function in `app.js` (change `rating:mattress:` prefix to match your use case)
+- **Storage Key**: Modify `storageKey()` function in `app.js` (default prefix is `rating:mattress:`—change to match your domain)
 
 ## Security & Privacy
 
@@ -246,7 +247,7 @@ fivestar-rating-kiosk/
 
 - Data is device-specific (not synced across devices)
 - No cloud backup or export API
-- localStorage has ~5-10MB limit (varies by browser; typically handles ~50k ratings)
+- localStorage has ~5-10MB limit (varies by browser; each rating ~50-100 bytes)
 - Wake Lock fallback on iOS uses video element workaround
 
 ## Troubleshooting
