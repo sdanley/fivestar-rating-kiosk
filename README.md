@@ -147,9 +147,9 @@ To change the product being rated:
 | Wake Lock | Fallback* | ✅ | ✅ | ✅ |
 | Fullscreen | ✅ | ✅ | ✅ | ✅ |
 
-*✅ = Full Support, ⚠️ = Partial Support, ❌ = Not Supported*
+*✅ = Full Support, ⚠️ = Partial Support, ❌ = Not Supported.*
 
-*iOS Safari uses video element fallback for Wake Lock as native API is not fully supported.
+*iOS Safari uses video element fallback for Wake Lock as native API is not fully supported.*
 
 ## Data Storage
 
@@ -210,7 +210,7 @@ fivestar-rating-kiosk/
 - **Colors**: Edit CSS custom properties in `styles.css`
 - **Branding**: Replace `logo.svg` and `logo-gray.svg`
 - **Icons**: Replace icon files (maintain sizes: 192x192, 512x512)
-- **Storage Key**: Modify `storageKey()` function in `app.js` (currently uses 'mattress' as product category prefix)
+- **Storage Key**: Modify `storageKey()` function in `app.js` (change `rating:mattress:` prefix to match your use case)
 
 ## Security & Privacy
 
