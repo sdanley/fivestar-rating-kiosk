@@ -26,7 +26,7 @@ Five Star Rating Kiosk is a browser-based rating application designed to run in 
 ### Admin Panel
 Access hidden admin features by:
 - Tapping the bottom-right corner 5 times rapidly, or
-- Long-pressing the bottom-right corner for 1 second
+- Long-pressing the bottom-right corner for 900ms (0.9 seconds)
 
 Admin features include:
 - **Statistics Dashboard**: View rating distribution and averages
