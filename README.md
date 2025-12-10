@@ -144,10 +144,12 @@ To change the product being rated:
 | Basic Ratings | ✅ | ✅ | ✅ | ✅ |
 | Service Worker | ✅ | ✅ | ✅ | ✅ |
 | PWA Install | ✅ | ✅ | ✅ | ⚠️ |
-| Wake Lock | Fallback | ✅ | ✅ | ✅ |
+| Wake Lock | Fallback* | ✅ | ✅ | ✅ |
 | Fullscreen | ✅ | ✅ | ✅ | ✅ |
 
 *✅ = Full Support, ⚠️ = Partial Support, ❌ = Not Supported*
+
+*iOS Safari uses video element fallback for Wake Lock as native API is not fully supported
 
 ## Data Storage
 
@@ -244,7 +246,7 @@ fivestar-rating-kiosk/
 
 - Data is device-specific (not synced across devices)
 - No cloud backup or export API
-- localStorage has ~5-10MB limit (handles ~50k ratings typically)
+- localStorage has ~5-10MB limit (varies by browser; typically handles ~50k ratings)
 - Wake Lock fallback on iOS uses video element workaround
 
 ## Troubleshooting
