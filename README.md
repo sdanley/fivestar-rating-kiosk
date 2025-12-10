@@ -247,7 +247,7 @@ fivestar-rating-kiosk/
 
 - Data is device-specific (not synced across devices)
 - No cloud backup or export API
-- localStorage has ~5-10MB limit (varies by browser; each rating ~50-100 bytes)
+- localStorage has ~5-10MB limit (varies by browser; approximately 50,000-100,000 ratings based on typical limits)
 - Wake Lock fallback on iOS uses video element workaround
 
 ## Troubleshooting
