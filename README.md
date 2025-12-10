@@ -144,7 +144,7 @@ To change the product being rated:
 | Basic Ratings | ✅ | ✅ | ✅ | ✅ |
 | Service Worker | ✅ | ✅ | ✅ | ✅ |
 | PWA Install | ✅ | ✅ | ✅ | ⚠️ |
-| Wake Lock | Fallback | ✅ | ✅ | ⚠️ |
+| Wake Lock | Fallback | ✅ | ✅ | ✅ |
 | Fullscreen | ✅ | ✅ | ✅ | ✅ |
 
 *✅ = Full Support, ⚠️ = Partial Support, ❌ = Not Supported*
@@ -183,7 +183,7 @@ Admin export creates a JSON file with:
 ```
 fivestar-rating-kiosk/
 ├── index.html           # Main HTML structure
-├── app.js              # Application logic (37KB)
+├── app.js              # Application logic
 ├── styles.css          # Styling and themes
 ├── sw.js               # Service Worker for offline support
 ├── manifest.webmanifest # PWA manifest
