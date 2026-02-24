@@ -106,7 +106,41 @@
   const averageBlock=document.getElementById('averageBlock');
   const liveAnnouncer=document.getElementById('liveAnnouncer');
   const statusDiv=document.getElementById('status');
+  const submitWrapper=document.getElementById('submitWrapper');
+  const submitBtn=document.getElementById('submitBtn');
+  const resultsActions=document.getElementById('resultsActions');
+  const autoCountdown=document.getElementById('autoCountdown');
+  const rateAnotherBtn=document.getElementById('rateAnotherBtn');
+  const stationSetupWrapper=document.getElementById('stationSetupWrapper');
+  const setupTitlesList=document.getElementById('setupTitlesList');
+  const stationIdDisplay=document.getElementById('stationIdDisplay');
+  const saveStationBtn=document.getElementById('saveStationBtn');
+  const addTitleBtn=document.getElementById('addTitleBtn');
   const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0;
+  // ---- Station Config & FNV-1a Hash ----
+  const STATION_CONFIG_KEY='station:config';
+  let stationTitles=[]; let currentTitleIndex=0;
+  function fnv1a32(str){let h=0x811c9dc5>>>0;for(let i=0;i<str.length;i++){h=(h^str.charCodeAt(i))>>>0;h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');}
+  function normalizeTitle(t){return t.trim().toLowerCase();}
+  function computeStationId(titles){return fnv1a32(titles.map(normalizeTitle).join('|'));}
+  function loadStationConfig(){try{const raw=localStorage.getItem(STATION_CONFIG_KEY);if(!raw)return null;return JSON.parse(raw);}catch{return null;}}
+  function saveStationConfig(cfg){localStorage.setItem(STATION_CONFIG_KEY,JSON.stringify(cfg));}
+  // ---- Phase Management ----
+  let autoReturnInterval=null; const AUTO_RETURN_SEC=10;
+  function clearAutoReturn(){if(autoReturnInterval){clearInterval(autoReturnInterval);autoReturnInterval=null;}}
+  function startAutoReturn(){clearAutoReturn();let remaining=AUTO_RETURN_SEC;if(autoCountdown)autoCountdown.textContent=remaining;autoReturnInterval=setInterval(()=>{remaining--;if(autoCountdown)autoCountdown.textContent=remaining;if(remaining<=0){clearAutoReturn();goRateAnother();}},1000);}
+  function goRateAnother(){clearAutoReturn();selected=0;pending=0;if(stationTitles.length>1){currentTitleIndex=(currentTitleIndex+1)%stationTitles.length;currentId=stationTitles[currentTitleIndex];}buildStars();showRatingPhase();}
+  function showRatingPhase(){heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}
+  function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
+  function selectPending(val){pending=val;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');showHint();}
+  // ---- Setup Screen ----
+  function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
+  function updateStationIdPreview(){if(!stationIdDisplay||!setupTitlesList)return;const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(titles.length){stationIdDisplay.textContent='Station ID: '+computeStationId(titles);}else{stationIdDisplay.textContent='';}}
+  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';}
+  function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');}
+  addTitleBtn?.addEventListener('click',()=>{addSetupTitleInput('');updateStationIdPreview();});
+  if(setupTitlesList){setupTitlesList.addEventListener('input',updateStationIdPreview);}
+  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const stationId=computeStationId(titles);saveStationConfig({titles,stationId});stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
   function storageKey(id){return `rating:mattress:${id}`}
   function loadAgg(id){try{const raw=localStorage.getItem(storageKey(id));if(!raw)return{count:0,total:0,buckets:[0,0,0,0,0]};const p=JSON.parse(raw);if(!Array.isArray(p.buckets)||p.buckets.length!==5)p.buckets=[0,0,0,0,0];if(typeof p.count!== 'number'||typeof p.total!=='number')return{count:0,total:0,buckets:[0,0,0,0,0]};return p;}catch{return{count:0,total:0,buckets:[0,0,0,0,0]};}}
   function saveAgg(id,a){localStorage.setItem(storageKey(id),JSON.stringify(a))}
@@ -156,18 +190,31 @@
   // Request persistent storage quota (best effort)
   if(navigator.storage && navigator.storage.persist){navigator.storage.persisted().then(p=>{ if(!p){ navigator.storage.persist().catch(()=>{}); } });}
   function fmtAvg(c,t){if(c===0)return{txt:'--',v:0};const v=t/c;return{txt:v.toFixed(2).replace(/\.00$/, '').replace(/(\.[0-9])0$/, '$1'),v};}
-  function buildStars(){starsContainer.innerHTML='';for(let i=1;i<=STAR_COUNT;i++){const b=document.createElement('button');b.className='star-btn';b.type='button';b.setAttribute('data-star',String(i));b.setAttribute('role','radio');b.setAttribute('aria-label',`${i} star${i>1?'s':''}`);b.setAttribute('aria-checked','false');b.addEventListener('pointerenter',()=>{hoverVal=i;paintStars();});b.addEventListener('pointerleave',()=>{hoverVal=0;paintStars();});b.addEventListener('click',()=>{if(!currentId){flash('Enter a name first.',true);return;}commitRating(i);});const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('star');const gBase=document.createElementNS('http://www.w3.org/2000/svg','g');gBase.classList.add('star-base');const baseUse=document.createElementNS('http://www.w3.org/2000/svg','use');baseUse.setAttribute('href','#star-shape');gBase.appendChild(baseUse);const gFill=document.createElementNS('http://www.w3.org/2000/svg','g');gFill.classList.add('star-fill');const fillUse=document.createElementNS('http://www.w3.org/2000/svg','use');fillUse.setAttribute('href','#star-shape');gFill.appendChild(fillUse);svg.append(gBase,gFill);b.append(svg);starsContainer.append(b);}}
-  function commitRating(val){selected=val;pending=0;const agg=record(currentId,val);flash('Saved!',false);updateUI(agg);setTimeout(()=>{selected=0;paintStars();},2600);paintStars();if(kbdHint){kbdHint.classList.add('hidden');}}
-  // Wrap commitRating to also trigger backup
-  const _origCommit=commitRating; commitRating=function(val){_origCommit(val); backupSnapshot();};
+  function buildStars(){starsContainer.innerHTML='';for(let i=1;i<=STAR_COUNT;i++){const b=document.createElement('button');b.className='star-btn';b.type='button';b.setAttribute('data-star',String(i));b.setAttribute('role','radio');b.setAttribute('aria-label',`${i} star${i>1?'s':''}`);b.setAttribute('aria-checked','false');b.addEventListener('pointerenter',()=>{hoverVal=i;paintStars();});b.addEventListener('pointerleave',()=>{hoverVal=0;paintStars();});b.addEventListener('click',()=>{if(!currentId){flash('Enter a name first.',true);return;}selectPending(i);});const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('star');const gBase=document.createElementNS('http://www.w3.org/2000/svg','g');gBase.classList.add('star-base');const baseUse=document.createElementNS('http://www.w3.org/2000/svg','use');baseUse.setAttribute('href','#star-shape');gBase.appendChild(baseUse);const gFill=document.createElementNS('http://www.w3.org/2000/svg','g');gFill.classList.add('star-fill');const fillUse=document.createElementNS('http://www.w3.org/2000/svg','use');fillUse.setAttribute('href','#star-shape');gFill.appendChild(fillUse);svg.append(gBase,gFill);b.append(svg);starsContainer.append(b);}}
+  function commitRating(val){selected=val;pending=0;const agg=record(currentId,val);paintStars();if(kbdHint){kbdHint.classList.add('hidden');}backupSnapshot();showResultsPhase(agg);}
   function paintStars(){[...starsContainer.children].forEach((b,idx)=>{const star=idx+1;const fill=b.querySelector('.star-fill');const active=(hoverVal?star<=hoverVal:(pending?star<=pending:(selected&&star<=selected)));if(fill)fill.style.opacity=active?'1':'0';b.classList.toggle('on',selected&&star<=selected);b.classList.toggle('pending',pending&&star<=pending&&!selected);b.setAttribute('aria-checked',selected===star?'true':'false');if(pending===star&&!selected)b.setAttribute('aria-checked','true');});}
   let fractionalRenderRun=0;function renderFractional(v){avgStars.innerHTML='';fractionalRenderRun++;const run=fractionalRenderRun;for(let i=1;i<=STAR_COUNT;i++){const frac=Math.min(Math.max(v-(i-1),0),1);const wrap=document.createElement('div');wrap.className='fraction-wrap';wrap.dataset.frac=String(frac);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');if(frac<=0){svg.innerHTML=`<use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use>`;}else if(frac>=1){svg.innerHTML=`<use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use>`;}else{const fw=(24*frac).toFixed(3);const cf=`clipF_${run}_${i}`;svg.innerHTML=`<defs><clipPath id='${cf}'><rect width='${fw}' height='24'></rect></clipPath></defs><use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use><g clip-path='url(#${cf})'><use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use></g>`;}wrap.append(svg);avgStars.append(wrap);}}
-  function updateUI(agg){const {txt,v}=fmtAvg(agg.count,agg.total);heading.textContent=currentId;subtitle.classList.add('hidden');yourLabel.classList.remove('hidden');const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);averageBlock.classList.remove('hidden');starsContainer.classList.remove('hidden');document.querySelector('.panel')?.classList.add('rating-active');liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';}
   function flash(msg,err){if(statusDiv){statusDiv.textContent=msg;statusDiv.style.color=err?'var(--danger)':'var(--accent)';if(!err)setTimeout(()=>{if(statusDiv.textContent===msg)statusDiv.textContent='';},2000);}if(liveAnnouncer){liveAnnouncer.textContent=msg;}}
-  function initId(id){currentId=id;localStorage.setItem('last-product-name',id);buildStars();updateUI(loadAgg(id));paintStars();}
-  const last=localStorage.getItem('last-product-name');if(!idParam){idInputWrapper.classList.remove('hidden');if(last)idInput.value=last;}if(idParam){initId(idParam);}startBtn.addEventListener('click',()=>{const val=idInput.value.trim();if(!val){flash('Enter a name.',true);return;}const url=new URL(location.href);url.searchParams.set('m',val);history.replaceState({},'',url.toString());idInputWrapper.classList.add('hidden');initId(val);if(statusDiv){statusDiv.textContent='';statusDiv.style.color='var(--muted)';}});
-  // Listen for restored ratings and refresh UI if current product matches
-  window.addEventListener('ratings-restored',()=>{ if(currentId){ updateUI(loadAgg(currentId)); paintStars(); } updateAdminStats(); });
+  function initId(id){currentId=id;localStorage.setItem('last-product-name',id);buildStars();showRatingPhase();}
+  // Submit button handler
+  submitBtn?.addEventListener('click',()=>{if(pending){commitRating(pending);}});
+  // Rate another handler
+  rateAnotherBtn?.addEventListener('click',()=>goRateAnother());
+  // Initial startup: prefer station config, then URL param, then setup screen
+  (function startupInit(){
+    const cfg=loadStationConfig();
+    if(cfg&&Array.isArray(cfg.titles)&&cfg.titles.length){
+      stationTitles=cfg.titles;currentTitleIndex=0;
+      idInputWrapper.classList.add('hidden');
+      initId(stationTitles[0]);
+      return;
+    }
+    if(idParam){stationTitles=[idParam];currentTitleIndex=0;initId(idParam);return;}
+    showSetupScreen();
+  })();
+  startBtn.addEventListener('click',()=>{const val=idInput.value.trim();if(!val){flash('Enter a name.',true);return;}const url=new URL(location.href);url.searchParams.set('m',val);history.replaceState({},'',url.toString());idInputWrapper.classList.add('hidden');stationTitles=[val];currentTitleIndex=0;initId(val);if(statusDiv){statusDiv.textContent='';statusDiv.style.color='var(--muted)';}});
+  // Listen for restored ratings and refresh admin stats (don't force-show results)
+  window.addEventListener('ratings-restored',()=>{ updateAdminStats(); });
   // Perform reconcile after listeners & potential init so UI can refresh immediately
   reconcileBackup();
   const kbdHint=document.getElementById('kbdHint');let hintShown=false;function showHint(){if(hintShown||!kbdHint)return;kbdHint.classList.remove('hidden');hintShown=true;}
@@ -176,9 +223,9 @@
   const updateToast=document.getElementById('updateToast');navigator.serviceWorker?.addEventListener('message',evt=>{if(evt.data&&evt.data.type==='sw:activated'){if(updateToast){updateToast.textContent='Updated';updateToast.style.display='block';setTimeout(()=>{updateToast.style.display='none';},1800);}}if(evt.data&&evt.data.type==='sw:version'){window.__appRevision=evt.data.version;const ar=document.getElementById('adminRevision');if(ar)ar.textContent=evt.data.version;}});if(navigator.serviceWorker){navigator.serviceWorker.getRegistration().then(reg=>{if(!reg)return;if(reg.waiting){showUpdateToast(reg.waiting);}reg.addEventListener('updatefound',()=>{const nw=reg.installing;if(!nw)return;nw.addEventListener('statechange',()=>{if(nw.state==='installed'&&reg.waiting){showUpdateToast(reg.waiting);}});});});}
   function showUpdateToast(sw){if(!updateToast)return;updateToast.style.display='block';updateToast.onclick=()=>{sw.postMessage('sw:update');location.reload();}}
   (function(){if(!('serviceWorker' in navigator))return;function ask(){try{navigator.serviceWorker.controller&&navigator.serviceWorker.controller.postMessage('sw:get-version');}catch{}}if(navigator.serviceWorker.controller){ask();}navigator.serviceWorker.ready.then(()=>ask());navigator.serviceWorker.addEventListener('controllerchange',()=>{setTimeout(ask,60);});})();
-  document.addEventListener('keydown',e=>{if(!currentId)return;if(['ArrowRight','ArrowUp','ArrowLeft','ArrowDown','1','2','3','4','5'].includes(e.key))showHint();if(e.key>='1'&&e.key<='5'){commitRating(Number(e.key));return;}if(['ArrowRight','ArrowUp'].includes(e.key)){e.preventDefault();pending=pending?Math.min(5,pending+1):1;paintStars();return;}if(['ArrowLeft','ArrowDown'].includes(e.key)){e.preventDefault();if(pending>1)pending--;else if(!pending)pending=5;else pending=0;paintStars();return;}if(e.key==='Enter'&&pending){commitRating(pending);}});
+  document.addEventListener('keydown',e=>{if(!currentId)return;if(['ArrowRight','ArrowUp','ArrowLeft','ArrowDown','1','2','3','4','5'].includes(e.key))showHint();if(e.key>='1'&&e.key<='5'){selectPending(Number(e.key));return;}if(['ArrowRight','ArrowUp'].includes(e.key)){e.preventDefault();pending=pending?Math.min(5,pending+1):1;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');return;}if(['ArrowLeft','ArrowDown'].includes(e.key)){e.preventDefault();if(pending>1)pending--;else if(!pending)pending=5;else pending=0;paintStars();if(pending&&submitWrapper)submitWrapper.classList.remove('hidden');return;}if(e.key==='Enter'&&pending){commitRating(pending);}});
   starsContainer.addEventListener('focusin',()=>{showHint();});
-  function enterChangeMode(){if(!idInputWrapper)return;idInputWrapper.classList.remove('hidden');if(idInput){idInput.value=currentId;idInput.focus();}starsContainer.classList.add('hidden');averageBlock.classList.add('hidden');yourLabel.classList.add('hidden');document.querySelector('.panel')?.classList.remove('rating-active');statusDiv.textContent='Change product name';}
+  function enterChangeMode(){clearAutoReturn();if(!idInputWrapper)return;idInputWrapper.classList.remove('hidden');if(idInput){idInput.value=currentId;idInput.focus();}starsContainer.classList.add('hidden');averageBlock.classList.add('hidden');yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.remove('rating-active');statusDiv.textContent='Change product name';}
   let headingTapTimes=[];heading.addEventListener('click',()=>{const now=Date.now();headingTapTimes=headingTapTimes.filter(t=>now-t<1200);headingTapTimes.push(now);if(headingTapTimes.length>=3){headingTapTimes=[];enterChangeMode();}});
   let pressTimer=null;function cancelPress(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
   ['touchstart','mousedown'].forEach(ev=>heading.addEventListener(ev,(e)=>{if(ev==='mousedown'&&e.button!==0)return;cancelPress();pressTimer=setTimeout(()=>{enterChangeMode();},900);},{passive:true}));
@@ -188,6 +235,7 @@
   const wakeToggle=document.getElementById('wakeToggle');
   const wakeStatus=document.getElementById('wakeStatus');
   const adminRevision=document.getElementById('adminRevision');
+  const adminStationId=document.getElementById('adminStationId');
   const adminProduct=document.getElementById('adminProduct');
   const adminAvg=document.getElementById('adminAvg');
   const adminCount=document.getElementById('adminCount');
@@ -200,9 +248,10 @@
   const backupNowBtn=document.getElementById('backupNow');
   const exportBtn=document.getElementById('exportData');
   const clearBtn=document.getElementById('clearData');
+  const reconfigStationBtn=document.getElementById('reconfigStation');
   const adminClose=document.querySelector('.admin-close');
   let wakeLockObj=null; let wakeRequested=false; let adminTapTimes=[]; let hotspotPressTimer=null; const HOT_CORNER_PX=70; let fallbackVideo=null; let fallbackActive=false;
-  function updateAdminStats(){if(!currentId){adminProduct.textContent='--';adminAvg.textContent='--';adminCount.textContent='0';adminStats.textContent='No product selected.';return;}adminProduct.textContent=currentId;const agg=loadAgg(currentId);const {txt,v}=fmtAvg(agg.count,agg.total);adminAvg.textContent=txt==='--'?'--':`${txt} (${(v/5*100).toFixed(1)}%)`;adminCount.textContent=String(agg.count);adminStats.textContent=agg.buckets.map((c,i)=>`${i+1}★: ${c}`).join('  |  ');}  
+  function updateAdminStats(){const cfg=loadStationConfig();if(adminStationId)adminStationId.textContent=cfg?cfg.stationId:'--';if(!currentId){adminProduct.textContent='--';adminAvg.textContent='--';adminCount.textContent='0';adminStats.textContent='No product selected.';return;}adminProduct.textContent=currentId+(stationTitles.length>1?' ('+stationTitles.join(', ')+')':'');const agg=loadAgg(currentId);const {txt,v}=fmtAvg(agg.count,agg.total);adminAvg.textContent=txt==='--'?'--':`${txt} (${(v/5*100).toFixed(1)}%)`;adminCount.textContent=String(agg.count);adminStats.textContent=agg.buckets.map((c,i)=>`${i+1}★: ${c}`).join('  |  ');}  
   function updateOnlineAdmin(){if(adminOnline)adminOnline.textContent=navigator.onLine?'Yes':'No';}
   window.addEventListener('online',updateOnlineAdmin);window.addEventListener('offline',updateOnlineAdmin);updateOnlineAdmin();
   function setRevisionAdmin(){if(window.__appRevision&&adminRevision){adminRevision.textContent=window.__appRevision;}}setRevisionAdmin();
@@ -218,6 +267,7 @@
   adminClose?.addEventListener('click',closeAdmin);
   adminOverlay?.addEventListener('click',e=>{if(e.target===adminOverlay)closeAdmin();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!adminOverlay.classList.contains('hidden'))closeAdmin();});
+  reconfigStationBtn?.addEventListener('click',()=>{closeAdmin();clearAutoReturn();showSetupScreen();const cfg=loadStationConfig();if(cfg&&setupTitlesList){setupTitlesList.innerHTML='';(cfg.titles||[]).forEach(t=>addSetupTitleInput(t));updateStationIdPreview();}});
   function inHotCorner(x,y){const vw=window.innerWidth,vh=window.innerHeight;return x>vw-HOT_CORNER_PX&&y>vh-HOT_CORNER_PX;}
   function registerCornerTap(){const now=Date.now();adminTapTimes=adminTapTimes.filter(t=>now-t<1500);adminTapTimes.push(now);if(adminTapTimes.length>=5){adminTapTimes=[];openAdmin();}}
   function hotspotCancel(){if(hotspotPressTimer){clearTimeout(hotspotPressTimer);hotspotPressTimer=null;}}
