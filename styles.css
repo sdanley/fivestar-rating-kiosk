@@ -106,7 +106,20 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 .admin-actions button { flex:1 1 auto; min-width:120px; background:var(--accent); color:#222; font-weight:600; border:none; border-radius:18px; padding:.7rem 1rem; cursor:pointer; font-size:.75rem; letter-spacing:.5px }
 .admin-actions button.sec { background:var(--panel-alt); color:var(--text); border:1px solid #2a3239 }
 .admin-close { position:absolute; top:10px; right:12px; background:var(--panel-alt); border:1px solid #2a3239; color:var(--text); border-radius:50%; width:38px; height:38px; font-weight:700; cursor:pointer; }
-.admin-stats { font-family:ui-monospace, monospace; background:var(--panel-alt); border:1px solid #2a3239; border-radius:16px; padding:.75rem .9rem; margin-top:.4rem; font-size:.7rem; max-height:160px; overflow:auto; }
+.admin-stats { background:var(--panel-alt); border:1px solid #2a3239; border-radius:16px; padding:.9rem 1rem; margin-top:.6rem; }
+.admin-stats-product { font-size:.8rem; font-weight:700; letter-spacing:.4px; text-align:center; margin-bottom:.55rem; color:var(--text); }
+.admin-stats-row { display:flex; align-items:center; gap:.55rem; margin:.3rem 0; }
+.admin-stats-star { font-size:.88rem; font-weight:700; min-width:2.1rem; color:var(--text); }
+.admin-stats-count { font-size:1rem; font-weight:700; min-width:2.4rem; text-align:right; color:var(--text); font-family:ui-monospace,monospace; }
+.admin-stats-pct { font-size:.7rem; color:var(--muted); min-width:3rem; text-align:right; font-family:ui-monospace,monospace; }
+.admin-stats-bar { flex:1; height:9px; background:#2a3239; border-radius:5px; overflow:hidden; }
+.admin-stats-bar-fill { height:100%; background:var(--accent); border-radius:5px; }
+.admin-stats-totals { font-size:.78rem; color:var(--muted); text-align:center; margin-top:.65rem; letter-spacing:.35px; border-top:1px solid #2a3239; padding-top:.55rem; }
+.admin-settings { border:1px solid #2a3239; border-radius:16px; padding:.7rem .9rem; margin-top:.5rem; }
+.admin-settings-title { font-size:.7rem; font-weight:700; color:var(--muted); letter-spacing:.5px; margin-bottom:.5rem; text-transform:uppercase; }
+.admin-settings-row { display:flex; align-items:center; justify-content:space-between; gap:.6rem; padding:.2rem 0; }
+.admin-settings-label { font-size:.78rem; color:var(--text); }
+.admin-settings-select { background:var(--panel); color:var(--text); border:1px solid #2a3239; border-radius:10px; padding:.3rem .55rem; font-size:.78rem; cursor:pointer; -webkit-appearance:auto; }
 .wake-badge { display:inline-block; margin-left:.4rem; padding:.15rem .45rem; font-size:.55rem; border:1px solid #2a3239; border-radius:10px; letter-spacing:.5px; background:var(--panel-alt); }
 #updateToast { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); background:var(--panel-alt); color:var(--text); font-size:.72rem; padding:.55rem .9rem; border:1px solid #2a3239; border-radius:999px; letter-spacing:.55px; display:none; z-index:60; box-shadow:0 6px 16px -8px rgba(0,0,0,.55); cursor:pointer }
 .admin-actions button.danger { background:var(--danger); color:#fff; }

@@ -86,6 +86,20 @@
             <button id="exportData" type="button" class="sec">Export</button>
             <button id="clearData" type="button" class="sec danger">Clear</button>
           </div>
+          <div class="admin-settings" id="adminSettings">
+            <div class="admin-settings-title">Settings</div>
+            <div class="admin-settings-row">
+              <label for="settingReturnTimeout" class="admin-settings-label">Auto-return after rating</label>
+              <select id="settingReturnTimeout" class="admin-settings-select">
+                <option value="5">5 s</option>
+                <option value="8">8 s</option>
+                <option value="10">10 s</option>
+                <option value="15">15 s</option>
+                <option value="20">20 s</option>
+                <option value="30">30 s</option>
+              </select>
+            </div>
+          </div>
           <div class="admin-stats" id="adminStats" aria-label="Rating Buckets"></div>
           <div id="adminDiag" class="hidden" aria-label="Diagnostics"></div>
           <div class="u-muted-note">Tap corner hotspot (5x) or long-press corner to open. Tap outside box or press ESC

@@ -125,10 +125,15 @@
   function computeStationId(titles){return fnv1a32(titles.map(normalizeTitle).join('|'));}
   function loadStationConfig(){try{const raw=localStorage.getItem(STATION_CONFIG_KEY);if(!raw)return null;return JSON.parse(raw);}catch{return null;}}
   function saveStationConfig(cfg){localStorage.setItem(STATION_CONFIG_KEY,JSON.stringify(cfg));}
-  // ---- Phase Management ----
-  let autoReturnInterval=null; const AUTO_RETURN_SEC=10;
+  // ---- Kiosk Settings ----
+  const SETTINGS_KEY='kiosk:settings';
+  const DEFAULT_SETTINGS={returnTimeoutSec:10};
+  function loadSettings(){try{const raw=localStorage.getItem(SETTINGS_KEY);if(!raw)return Object.assign({},DEFAULT_SETTINGS);return Object.assign({},DEFAULT_SETTINGS,JSON.parse(raw));}catch{return Object.assign({},DEFAULT_SETTINGS);}}
+  function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
+  let kioskSettings=loadSettings();
+  let autoReturnInterval=null;
   function clearAutoReturn(){if(autoReturnInterval){clearInterval(autoReturnInterval);autoReturnInterval=null;}}
-  function startAutoReturn(){clearAutoReturn();let remaining=AUTO_RETURN_SEC;if(autoCountdown)autoCountdown.textContent=remaining;autoReturnInterval=setInterval(()=>{remaining--;if(autoCountdown)autoCountdown.textContent=remaining;if(remaining<=0){clearAutoReturn();goRateAnother();}},1000);}
+  function startAutoReturn(){clearAutoReturn();let remaining=kioskSettings.returnTimeoutSec;if(autoCountdown)autoCountdown.textContent=remaining;autoReturnInterval=setInterval(()=>{remaining--;if(autoCountdown)autoCountdown.textContent=remaining;if(remaining<=0){clearAutoReturn();goRateAnother();}},1000);}
   function goRateAnother(){clearAutoReturn();selected=0;pending=0;if(stationTitles.length>1){currentTitleIndex=(currentTitleIndex+1)%stationTitles.length;currentId=stationTitles[currentTitleIndex];}buildStars();showRatingPhase();}
   function showRatingPhase(){heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}
   function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
@@ -200,6 +205,10 @@
   submitBtn?.addEventListener('click',()=>{if(pending){commitRating(pending);}});
   // Rate another handler
   rateAnotherBtn?.addEventListener('click',()=>goRateAnother());
+  // Settings DOM wiring
+  const settingReturnTimeout=document.getElementById('settingReturnTimeout');
+  function applySettingsToUI(){if(settingReturnTimeout)settingReturnTimeout.value=String(kioskSettings.returnTimeoutSec);}
+  settingReturnTimeout?.addEventListener('change',()=>{kioskSettings.returnTimeoutSec=Number(settingReturnTimeout.value)||10;saveSettings(kioskSettings);});
   // Initial startup: prefer station config, then URL param, then setup screen
   (function startupInit(){
     const cfg=loadStationConfig();
@@ -251,7 +260,38 @@
   const reconfigStationBtn=document.getElementById('reconfigStation');
   const adminClose=document.querySelector('.admin-close');
   let wakeLockObj=null; let wakeRequested=false; let adminTapTimes=[]; let hotspotPressTimer=null; const HOT_CORNER_PX=70; let fallbackVideo=null; let fallbackActive=false;
-  function updateAdminStats(){const cfg=loadStationConfig();if(adminStationId)adminStationId.textContent=cfg?cfg.stationId:'--';if(!currentId){adminProduct.textContent='--';adminAvg.textContent='--';adminCount.textContent='0';adminStats.textContent='No product selected.';return;}adminProduct.textContent=currentId+(stationTitles.length>1?' ('+stationTitles.join(', ')+')':'');const agg=loadAgg(currentId);const {txt,v}=fmtAvg(agg.count,agg.total);adminAvg.textContent=txt==='--'?'--':`${txt} (${(v/5*100).toFixed(1)}%)`;adminCount.textContent=String(agg.count);adminStats.textContent=agg.buckets.map((c,i)=>`${i+1}★: ${c}`).join('  |  ');}  
+  function updateAdminStats(){
+    const cfg=loadStationConfig();
+    if(adminStationId)adminStationId.textContent=cfg?cfg.stationId:'--';
+    if(!currentId){
+      if(adminProduct)adminProduct.textContent='--';
+      if(adminAvg)adminAvg.textContent='--';
+      if(adminCount)adminCount.textContent='0';
+      if(adminStats)adminStats.innerHTML='<div style="text-align:center;color:var(--muted);font-size:.75rem;padding:.4rem">No product selected.</div>';
+      return;
+    }
+    if(adminProduct)adminProduct.textContent=currentId+(stationTitles.length>1?' ('+stationTitles.join(', ')+')':'');
+    const agg=loadAgg(currentId);
+    const {txt,v}=fmtAvg(agg.count,agg.total);
+    if(adminAvg)adminAvg.textContent=txt==='--'?'--':`${txt} (${(v/5*100).toFixed(1)}%)`;
+    if(adminCount)adminCount.textContent=String(agg.count);
+    if(!adminStats)return;
+    const maxBucket=Math.max(1,...agg.buckets);
+    let html=`<div class="admin-stats-product">${currentId}</div>`;
+    for(let i=5;i>=1;i--){
+      const count=agg.buckets[i-1];
+      const pct=agg.count?Math.round(count/agg.count*100):0;
+      const barW=Math.round(count/maxBucket*100);
+      html+=`<div class="admin-stats-row">
+        <span class="admin-stats-star">${'★'.repeat(i)}</span>
+        <span class="admin-stats-count">${count}</span>
+        <div class="admin-stats-bar"><div class="admin-stats-bar-fill" style="width:${barW}%"></div></div>
+        <span class="admin-stats-pct">${pct}%</span>
+      </div>`;
+    }
+    html+=`<div class="admin-stats-totals">${agg.count} rating${agg.count===1?'':'s'} &nbsp;·&nbsp; avg ${txt==='--'?'—':txt+'★'} &nbsp;·&nbsp; ${new Date().toLocaleDateString()}</div>`;
+    adminStats.innerHTML=html;
+  }  
   function updateOnlineAdmin(){if(adminOnline)adminOnline.textContent=navigator.onLine?'Yes':'No';}
   window.addEventListener('online',updateOnlineAdmin);window.addEventListener('offline',updateOnlineAdmin);updateOnlineAdmin();
   function setRevisionAdmin(){if(window.__appRevision&&adminRevision){adminRevision.textContent=window.__appRevision;}}setRevisionAdmin();
@@ -262,7 +302,7 @@
   function updateWakeUI(){if(!wakeStatus||!wakeToggle)return;const on=!!wakeLockObj||fallbackActive;wakeStatus.textContent=on?(fallbackActive?'WAKE Fallback':'WAKE ON'):'WAKE OFF';wakeStatus.dataset.state=on?'on':'off';wakeToggle.textContent=on?'Disable Wake Lock':'Enable Wake Lock';}
   wakeToggle?.addEventListener('click',()=>{if(wakeLockObj)releaseWake();else acquireWake();});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&wakeRequested&&!wakeLockObj&&!fallbackActive){acquireWake();}});
-  function openAdmin(){adminOverlay?.classList.remove('hidden');updateAdminStats();setRevisionAdmin();}
+  function openAdmin(){adminOverlay?.classList.remove('hidden');updateAdminStats();setRevisionAdmin();applySettingsToUI();}
   function closeAdmin(){adminOverlay?.classList.add('hidden');}
   adminClose?.addEventListener('click',closeAdmin);
   adminOverlay?.addEventListener('click',e=>{if(e.target===adminOverlay)closeAdmin();});
@@ -274,7 +314,7 @@
   document.addEventListener('click',e=>{if(inHotCorner(e.clientX,e.clientY))registerCornerTap();});
   ['touchstart','mousedown'].forEach(ev=>document.addEventListener(ev,(e)=>{const pt=ev.startsWith('touch')?(e.touches&&e.touches[0]):e;if(!pt)return;if(ev==='mousedown'&&e.button!==0)return;if(!inHotCorner(pt.clientX,pt.clientY))return;hotspotCancel();hotspotPressTimer=setTimeout(()=>{openAdmin();},900);},{passive:true}));
   ['touchend','touchcancel','mouseup','mouseleave','blur'].forEach(ev=>document.addEventListener(ev,hotspotCancel));
-  clearBtn?.addEventListener('click',()=>{if(!confirm('Clear ALL rating data?'))return;Object.keys(localStorage).filter(k=>k.startsWith('rating:mattress:')).forEach(k=>localStorage.removeItem(k));flash('All data cleared',false);updateAdminStats();if(currentId){updateUI(loadAgg(currentId));paintStars();}});
+  clearBtn?.addEventListener('click',()=>{if(!confirm('Clear ALL rating data?'))return;Object.keys(localStorage).filter(k=>k.startsWith('rating:mattress:')).forEach(k=>localStorage.removeItem(k));flash('All data cleared',false);updateAdminStats();if(currentId){showRatingPhase();}});
   const diagBox=document.getElementById('adminDiag');function populateDiag(){if(!diagBox)return;const vv=window.visualViewport;const mem=performance&&performance.memory?performance.memory:null;const lines=[];lines.push('UserAgent: '+navigator.userAgent);lines.push('Inner: '+window.innerWidth+'x'+window.innerHeight+' DPR '+window.devicePixelRatio);if(vv)lines.push('visualViewport: '+vv.width.toFixed(1)+'x'+vv.height.toFixed(1)+' scale '+vv.scale);lines.push('Revision: '+(window.__appRevision||'--'));lines.push('Keys: '+Object.keys(localStorage).filter(k=>k.startsWith('rating:mattress:')).length);if(currentId){const agg=loadAgg(currentId);lines.push('Current '+currentId+': '+agg.count+' ratings total='+agg.total);}if(mem){lines.push('JS Heap: '+(mem.usedJSHeapSize/1048576).toFixed(1)+'MB / '+(mem.jsHeapSizeLimit/1048576).toFixed(0)+'MB');}lines.push('Time: '+new Date().toLocaleString());diagBox.textContent=lines.join('\n');}
   diagToggle?.addEventListener('click',()=>{if(!diagBox)return;diagBox.classList.toggle('hidden');if(!diagBox.classList.contains('hidden')){populateDiag();}});window.addEventListener('resize',()=>{if(diagBox&&!diagBox.classList.contains('hidden'))populateDiag();});if(window.visualViewport){visualViewport.addEventListener('resize',()=>{if(diagBox&&!diagBox.classList.contains('hidden'))populateDiag();});}
   window.addEventListener('online',()=>updateOnlineAdmin());window.addEventListener('offline',()=>updateOnlineAdmin());
