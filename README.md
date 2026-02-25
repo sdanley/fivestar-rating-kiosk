@@ -181,6 +181,55 @@ Admin export creates a JSON file with:
 
 ## Development
 
+### Testing the Application
+
+#### Quick start (local server)
+
+```bash
+# Python 3
+python -m http.server 8000
+
+# Node.js
+npx http-server -p 8000
+```
+
+Then open `http://localhost:8000` in your browser (Chrome or Safari recommended).
+
+#### Feature checklist
+
+| Feature | How to test |
+|---------|-------------|
+| **Station setup** | On first load (or after clearing `localStorage['station:config']`), the setup screen prompts for one or more product titles. Enter a name and tap **Save Station**. A deterministic 8-char Station ID is shown (e.g., `660db036`). |
+| **Dual / split-station** | During station setup, add a second product title with **+ Add Product**. On each "Rate Another" / auto-return cycle the app cycles through both titles. |
+| **Rating flow** | Tap a star — it enters *pending* state (highlighted, no submit yet). Tap **Submit** to commit. Average is shown only **after** submission. |
+| **Auto-return** | After submitting, a countdown timer appears. The app returns to the rating screen automatically after the configured timeout. |
+| **"Rate Another"** | Tap the button any time during the results view to return immediately without waiting for the timer. |
+| **Admin panel** | Tap the bottom-right corner 5× rapidly (or long-press ~900 ms). The admin panel shows station ID, rating stats, settings, and export. |
+| **Auto-return timeout** | Inside the admin panel → **Settings**, change the auto-return timeout dropdown; the new value takes effect immediately. |
+| **Reconfigure station** | Inside the admin panel, tap **Reconfigure Station** to re-run the first-run setup without clearing ratings. |
+| **Dark / light theme** | Toggle the moon/sun icon in the top bar. Dark mode uses Leggett Blue (`#002855`) background; light mode uses a white background with Leggett Blue text. |
+| **Empty star outlines** | In dark mode, unselected star outlines appear in ISPA Green (`#8acc9f`). |
+| **Offline / PWA** | Load the page once, then disconnect from the internet and reload — the app should continue working from the service worker cache. |
+| **Data export** | Open the admin panel and tap **Export JSON** to download a JSON file of all stored ratings. |
+
+#### Reconfigure for a fresh test run
+
+To reset the app back to first-run state:
+
+```js
+// Paste in the browser's DevTools console
+localStorage.removeItem('station:config');
+location.reload();
+```
+
+To clear all ratings as well:
+
+```js
+Object.keys(localStorage)
+  .filter(k => k.startsWith('rating:'))
+  .forEach(k => localStorage.removeItem(k));
+```
+
 ### File Structure:
 ```
 fivestar-rating-kiosk/
