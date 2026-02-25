@@ -60,6 +60,8 @@
           <div class="admin-meta">
             <div class="label">Revision</div>
             <div id="adminRevision">--</div>
+            <div class="label">Station ID</div>
+            <div id="adminStationId">--</div>
             <div class="label">Product</div>
             <div id="adminProduct">--</div>
             <div class="label">Average</div>
@@ -77,11 +79,26 @@
           </div>
           <div class="admin-actions">
             <button id="wakeToggle" type="button">Enable Wake Lock</button>
+            <button id="reconfigStation" type="button" class="sec">Reconfigure Station</button>
             <button id="diagToggle" type="button" class="sec">Diagnostics</button>
             <button id="checkUpdate" type="button" class="sec">Check Update</button>
             <button id="backupNow" type="button" class="sec">Backup Now</button>
             <button id="exportData" type="button" class="sec">Export</button>
             <button id="clearData" type="button" class="sec danger">Clear</button>
+          </div>
+          <div class="admin-settings" id="adminSettings">
+            <div class="admin-settings-title">Settings</div>
+            <div class="admin-settings-row">
+              <label for="settingReturnTimeout" class="admin-settings-label">Auto-return after rating</label>
+              <select id="settingReturnTimeout" class="admin-settings-select">
+                <option value="5">5 s</option>
+                <option value="8">8 s</option>
+                <option value="10">10 s</option>
+                <option value="15">15 s</option>
+                <option value="20">20 s</option>
+                <option value="30">30 s</option>
+              </select>
+            </div>
           </div>
           <div class="admin-stats" id="adminStats" aria-label="Rating Buckets"></div>
           <div id="adminDiag" class="hidden" aria-label="Diagnostics"></div>
@@ -101,7 +118,20 @@
         <div id="avgStars" class="avg-stars" aria-hidden="true"></div>
         <div id="avgLine" class="avg-line">-- out of 5 Stars <small>with 0 Ratings</small></div>
       </div>
+      <div id="resultsActions" class="results-actions hidden">
+        <p class="results-encourage">See how others feel about this product!</p>
+        <button id="rateAnotherBtn" type="button" class="rate-another-btn">Rate Another</button>
+        <div class="auto-return-msg">Returning in <span id="autoCountdown">10</span>s&hellip;</div>
+      </div>
       <p id="subtitle" class="rating-text">Enter a name to begin</p>
+
+      <div id="stationSetupWrapper" class="station-setup hidden">
+        <p class="setup-instructions">Configure this kiosk station — enter the product name(s) to rate:</p>
+        <div id="setupTitlesList" class="setup-titles-list"></div>
+        <button id="addTitleBtn" type="button" class="setup-btn setup-btn-sec">&#43; Add Product</button>
+        <button id="saveStationBtn" type="button" class="setup-btn">Save &amp; Start</button>
+        <div id="stationIdDisplay" class="station-id-display"></div>
+      </div>
 
       <div id="idInputWrapper" class="input-row hidden">
         <input id="idInput" placeholder="Product Name" maxlength="40" autocomplete="off" />
@@ -109,9 +139,13 @@
         <div class="notice">Local demo only (stored in this browser).</div>
       </div>
 
-      <div id="yourLabel" class="section-label hidden">Add Your Rating</div>
+      <div id="yourLabel" class="section-label hidden">Rate the Feel of this Bed</div>
       <div id="starsContainer" class="stars hidden" role="radiogroup" aria-label="Select a star rating"></div>
-      <div id="kbdHint" class="kbd-hint hidden">Press 1–5 or use arrow keys, Enter to save.</div>
+      <div id="submitWrapper" class="submit-wrapper hidden">
+        <p class="encourage-text">See how others feel about this product!</p>
+        <button id="submitBtn" type="button" class="submit-btn">Submit Rating</button>
+      </div>
+      <div id="kbdHint" class="kbd-hint hidden">Press 1–5 or use arrow keys, Enter to submit.</div>
 
       <div id="status" class="status" aria-live="polite"></div>
       <div id="liveAnnouncer" class="visually-hidden" aria-live="polite"></div>
