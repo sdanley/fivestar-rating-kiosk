@@ -81,6 +81,9 @@ svg.star { width:var(--star-size); height:var(--star-size); display:block; overf
 .footer-logo { margin-top:2rem; display:flex; justify-content:center }
 .footer-logo img { display:block; max-width:240px; width:32%; min-width:140px; height:auto; margin:0 auto }
 .footer-logo svg { display:none }
+/* Show only the correct logo for the active theme */
+html:not(.theme-light) .footer-logo .logo-light { display:none }
+html.theme-light .footer-logo .logo-dark { display:none }
 @media (max-width:780px){ .footer-logo img { width:46%; max-width:200px } }
 .visually-hidden { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0 0 0 0) !important; white-space:nowrap !important; border:0 !important; }
 @media (max-width:780px){ h1#headingMain { font-size:clamp(2.7rem,9vw,3.6rem); } .avg-stars { gap:.65rem } .panel { padding:1.05rem 1rem 2.6rem } .footer-logo { margin-top:2rem } }
