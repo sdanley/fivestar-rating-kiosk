@@ -84,6 +84,8 @@
             <button id="checkUpdate" type="button" class="sec">Check Update</button>
             <button id="backupNow" type="button" class="sec">Backup Now</button>
             <button id="exportData" type="button" class="sec">Export</button>
+            <button id="seedDemo" type="button" class="sec">Seed Demo</button>
+            <button id="arrangeLogoBtn" type="button" class="sec">Arrange Logo</button>
             <button id="clearData" type="button" class="sec danger">Clear</button>
           </div>
           <div class="admin-settings" id="adminSettings">
@@ -126,10 +128,15 @@
       <p id="subtitle" class="rating-text">Enter a name to begin</p>
 
       <div id="stationSetupWrapper" class="station-setup hidden">
-        <p class="setup-instructions">Configure this kiosk station — enter the product name(s) to rate:</p>
+        <p class="setup-instructions">Configure this kiosk station<br>Enter the product name(s) to rate:</p>
         <div id="setupTitlesList" class="setup-titles-list"></div>
         <button id="addTitleBtn" type="button" class="setup-btn setup-btn-sec">&#43; Add Product</button>
+        <div id="setupLabelDisplay" class="setup-label-display" role="button" tabindex="0" aria-label="Edit the rating prompt text">
+          <span id="setupLabelText" class="setup-label-text">Rate the Feel of this Bed</span><span class="setup-label-edit-icon" aria-hidden="true"> ✎</span>
+        </div>
+        <textarea id="setupLabelInput" class="setup-title-input setup-label-input hidden" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
         <button id="saveStationBtn" type="button" class="setup-btn">Save &amp; Start</button>
+        <button id="setupArrangeLogoBtn" type="button" class="setup-btn setup-btn-sec">Arrange Logo</button>
         <div id="stationIdDisplay" class="station-id-display"></div>
       </div>
 
@@ -141,6 +148,7 @@
 
       <div id="yourLabel" class="section-label hidden">Rate the Feel of this Bed</div>
       <div id="starsContainer" class="stars hidden" role="radiogroup" aria-label="Select a star rating"></div>
+      <div id="ratingGroupsContainer" class="rating-groups hidden"></div>
       <div id="submitWrapper" class="submit-wrapper hidden">
         <p class="encourage-text">See how others feel about this product!</p>
         <button id="submitBtn" type="button" class="submit-btn">Submit Rating</button>
@@ -150,9 +158,23 @@
       <div id="status" class="status" aria-live="polite"></div>
       <div id="liveAnnouncer" class="visually-hidden" aria-live="polite"></div>
       <div class="footer-logo" aria-label="Brand logo">
-  <img src="logo-gray.svg" alt="Brand logo" />
+        <img class="logo-dark" src="assets/logo-dark.png" alt="Brand logo" />
+        <img class="logo-light" src="assets/logo-light.png" alt="Brand logo" />
       </div>
     </div>
+  </div>
+  <div id="logoEditBar" class="logo-edit-bar hidden" role="toolbar" aria-label="Logo positioning controls">
+    <span class="logo-edit-grip" aria-hidden="true" title="Drag the logo to reposition">⠿</span>
+    <span class="logo-edit-bar-sep"></span>
+    <label class="logo-edit-rotate-wrap" title="Rotate logo">
+      <span class="logo-edit-rotate-icon" aria-hidden="true">↻</span>
+      <input type="range" id="logoEditRotate" class="logo-rotate-slider" min="-45" max="45" value="0" step="1" aria-label="Rotation angle">
+      <span id="logoEditRotateVal" class="logo-edit-rotate-val">0°</span>
+    </label>
+    <span class="logo-edit-bar-sep"></span>
+    <button id="logoThemeToggle" type="button" class="logo-edit-theme-btn" title="Toggle logo variant: auto / dark / light">🌓</button>
+    <span class="logo-edit-bar-sep"></span>
+    <button id="logoEditDone" type="button">Done</button>
   </div>
   <script src="app.js" defer></script>
   </body>

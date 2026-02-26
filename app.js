@@ -111,12 +111,17 @@
   const resultsActions=document.getElementById('resultsActions');
   const autoCountdown=document.getElementById('autoCountdown');
   const rateAnotherBtn=document.getElementById('rateAnotherBtn');
+  const ratingGroupsContainer=document.getElementById('ratingGroupsContainer');
   const stationSetupWrapper=document.getElementById('stationSetupWrapper');
   const setupTitlesList=document.getElementById('setupTitlesList');
   const stationIdDisplay=document.getElementById('stationIdDisplay');
   const saveStationBtn=document.getElementById('saveStationBtn');
   const addTitleBtn=document.getElementById('addTitleBtn');
-  const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0;
+  const setupLabelInput=document.getElementById('setupLabelInput');
+  const setupLabelDisplay=document.getElementById('setupLabelDisplay');
+  const setupLabelText=document.getElementById('setupLabelText');
+  const DEFAULT_RATING_LABEL='Rate the Feel of this Bed';
+  const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0; let pendingMap={};
   // ---- Station Config & FNV-1a Hash ----
   const STATION_CONFIG_KEY='station:config';
   let stationTitles=[]; let currentTitleIndex=0;
@@ -127,25 +132,53 @@
   function saveStationConfig(cfg){localStorage.setItem(STATION_CONFIG_KEY,JSON.stringify(cfg));}
   // ---- Kiosk Settings ----
   const SETTINGS_KEY='kiosk:settings';
-  const DEFAULT_SETTINGS={returnTimeoutSec:10};
+  const DEFAULT_SETTINGS={returnTimeoutSec:10,logoVisible:true,logoBottom:-8,logoRight:-5,logoAngle:0,logoVariant:'auto'};
   function loadSettings(){try{const raw=localStorage.getItem(SETTINGS_KEY);if(!raw)return Object.assign({},DEFAULT_SETTINGS);return Object.assign({},DEFAULT_SETTINGS,JSON.parse(raw));}catch{return Object.assign({},DEFAULT_SETTINGS);}}
   function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
   let kioskSettings=loadSettings();
   let autoReturnInterval=null;
   function clearAutoReturn(){if(autoReturnInterval){clearInterval(autoReturnInterval);autoReturnInterval=null;}}
   function startAutoReturn(){clearAutoReturn();let remaining=kioskSettings.returnTimeoutSec;if(autoCountdown)autoCountdown.textContent=remaining;autoReturnInterval=setInterval(()=>{remaining--;if(autoCountdown)autoCountdown.textContent=remaining;if(remaining<=0){clearAutoReturn();goRateAnother();}},1000);}
-  function goRateAnother(){clearAutoReturn();selected=0;pending=0;if(stationTitles.length>1){currentTitleIndex=(currentTitleIndex+1)%stationTitles.length;currentId=stationTitles[currentTitleIndex];}buildStars();showRatingPhase();}
-  function showRatingPhase(){heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}
+  function goRateAnother(){clearAutoReturn();selected=0;pending=0;pendingMap={};buildStars();showRatingPhase();}
+  function showRatingPhase(){if(stationTitles.length>1){heading.textContent=DEFAULT_RATING_LABEL;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');pendingMap={};buildMultiRating();}else{heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}}
   function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
   function selectPending(val){pending=val;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');showHint();}
   // ---- Setup Screen ----
-  function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
+  // Wiggle scheduler for the subtle label display
+  let _wiggleTimer=null;
+  function _cancelWiggle(){clearTimeout(_wiggleTimer);_wiggleTimer=null;}
+  function _scheduleWiggle(){
+    _cancelWiggle();
+    _wiggleTimer=setTimeout(function tick(){
+      if(setupLabelInput?.classList.contains('hidden')){
+        setupLabelDisplay.classList.remove('wiggle');void setupLabelDisplay.offsetWidth;
+        setupLabelDisplay.classList.add('wiggle');
+      }
+      _wiggleTimer=setTimeout(tick,8000+Math.random()*5000);
+    },6000+Math.random()*5000);
+  }
+  // Show the subtle ghost display (collapse textarea)
+  function _showLabelDisplay(){
+    if(setupLabelInput)setupLabelInput.classList.add('hidden');
+    if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');
+    const val=setupLabelInput?.value.trim()||'';
+    if(setupLabelText){setupLabelText.textContent=val||DEFAULT_RATING_LABEL;setupLabelText.style.opacity=val?'':'0.55';setupLabelText.style.fontStyle=val?'':'italic';}
+  }
+  // Expand to full textarea (on tap)
+  function _showLabelEdit(){
+    if(setupLabelDisplay)setupLabelDisplay.classList.add('hidden');
+    if(setupLabelInput){setupLabelInput.classList.remove('hidden');setupLabelInput.focus();}
+  }
+  function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addSetupTitleInput('');updateStationIdPreview();}});inp.addEventListener('blur',()=>{if(!inp.value.trim()&&setupTitlesList&&setupTitlesList.querySelectorAll('.setup-title-input').length>1){inp.remove();updateStationIdPreview();}});if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
   function updateStationIdPreview(){if(!stationIdDisplay||!setupTitlesList)return;const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(titles.length){stationIdDisplay.textContent='Station ID: '+computeStationId(titles);}else{stationIdDisplay.textContent='';}}
-  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';}
-  function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');}
+  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.getElementById('kbdHint')?.classList.add('hidden');document.querySelector('.panel')?.classList.remove('rating-active');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';const _cfg=loadStationConfig();const _savedLabel=_cfg?.label||'';if(setupLabelInput){setupLabelInput.value=_savedLabel;setupLabelInput.classList.add('hidden');}if(setupLabelText){setupLabelText.textContent=_savedLabel||DEFAULT_RATING_LABEL;setupLabelText.style.opacity=_savedLabel?'':'0.55';setupLabelText.style.fontStyle=_savedLabel?'':'italic';}if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');_scheduleWiggle();}
+  function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');_cancelWiggle();}
+  setupLabelDisplay?.addEventListener('click',_showLabelEdit);
+  setupLabelDisplay?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();_showLabelEdit();}});
+  setupLabelInput?.addEventListener('blur',()=>setTimeout(_showLabelDisplay,120));
   addTitleBtn?.addEventListener('click',()=>{addSetupTitleInput('');updateStationIdPreview();});
   if(setupTitlesList){setupTitlesList.addEventListener('input',updateStationIdPreview);}
-  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const stationId=computeStationId(titles);saveStationConfig({titles,stationId});stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
+  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});if(yourLabel)yourLabel.textContent=label||DEFAULT_RATING_LABEL;stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
   function storageKey(id){return `rating:mattress:${id}`}
   function loadAgg(id){try{const raw=localStorage.getItem(storageKey(id));if(!raw)return{count:0,total:0,buckets:[0,0,0,0,0]};const p=JSON.parse(raw);if(!Array.isArray(p.buckets)||p.buckets.length!==5)p.buckets=[0,0,0,0,0];if(typeof p.count!== 'number'||typeof p.total!=='number')return{count:0,total:0,buckets:[0,0,0,0,0]};return p;}catch{return{count:0,total:0,buckets:[0,0,0,0,0]};}}
   function saveAgg(id,a){localStorage.setItem(storageKey(id),JSON.stringify(a))}
@@ -195,25 +228,143 @@
   // Request persistent storage quota (best effort)
   if(navigator.storage && navigator.storage.persist){navigator.storage.persisted().then(p=>{ if(!p){ navigator.storage.persist().catch(()=>{}); } });}
   function fmtAvg(c,t){if(c===0)return{txt:'--',v:0};const v=t/c;return{txt:v.toFixed(2).replace(/\.00$/, '').replace(/(\.[0-9])0$/, '$1'),v};}
-  function buildStars(){starsContainer.innerHTML='';for(let i=1;i<=STAR_COUNT;i++){const b=document.createElement('button');b.className='star-btn';b.type='button';b.setAttribute('data-star',String(i));b.setAttribute('role','radio');b.setAttribute('aria-label',`${i} star${i>1?'s':''}`);b.setAttribute('aria-checked','false');b.addEventListener('pointerenter',()=>{hoverVal=i;paintStars();});b.addEventListener('pointerleave',()=>{hoverVal=0;paintStars();});b.addEventListener('click',()=>{if(!currentId){flash('Enter a name first.',true);return;}selectPending(i);});const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('star');const gBase=document.createElementNS('http://www.w3.org/2000/svg','g');gBase.classList.add('star-base');const baseUse=document.createElementNS('http://www.w3.org/2000/svg','use');baseUse.setAttribute('href','#star-shape');gBase.appendChild(baseUse);const gFill=document.createElementNS('http://www.w3.org/2000/svg','g');gFill.classList.add('star-fill');const fillUse=document.createElementNS('http://www.w3.org/2000/svg','use');fillUse.setAttribute('href','#star-shape');gFill.appendChild(fillUse);svg.append(gBase,gFill);b.append(svg);starsContainer.append(b);}}
+  function buildStars(){starsContainer.innerHTML='';buildStarButtons(starsContainer,(val)=>{if(!currentId){flash('Enter a name first.',true);return;}selectPending(val);});}
   function commitRating(val){selected=val;pending=0;const agg=record(currentId,val);paintStars();if(kbdHint){kbdHint.classList.add('hidden');}backupSnapshot();showResultsPhase(agg);}
   function paintStars(){[...starsContainer.children].forEach((b,idx)=>{const star=idx+1;const fill=b.querySelector('.star-fill');const active=(hoverVal?star<=hoverVal:(pending?star<=pending:(selected&&star<=selected)));if(fill)fill.style.opacity=active?'1':'0';b.classList.toggle('on',selected&&star<=selected);b.classList.toggle('pending',pending&&star<=pending&&!selected);b.setAttribute('aria-checked',selected===star?'true':'false');if(pending===star&&!selected)b.setAttribute('aria-checked','true');});}
-  let fractionalRenderRun=0;function renderFractional(v){avgStars.innerHTML='';fractionalRenderRun++;const run=fractionalRenderRun;for(let i=1;i<=STAR_COUNT;i++){const frac=Math.min(Math.max(v-(i-1),0),1);const wrap=document.createElement('div');wrap.className='fraction-wrap';wrap.dataset.frac=String(frac);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');if(frac<=0){svg.innerHTML=`<use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use>`;}else if(frac>=1){svg.innerHTML=`<use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use>`;}else{const fw=(24*frac).toFixed(3);const cf=`clipF_${run}_${i}`;svg.innerHTML=`<defs><clipPath id='${cf}'><rect width='${fw}' height='24'></rect></clipPath></defs><use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use><g clip-path='url(#${cf})'><use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use></g>`;}wrap.append(svg);avgStars.append(wrap);}}
+  let fractionalRenderRun=0;function renderFractionalInto(container,v){container.innerHTML='';fractionalRenderRun++;const run=fractionalRenderRun;for(let i=1;i<=STAR_COUNT;i++){const frac=Math.min(Math.max(v-(i-1),0),1);const wrap=document.createElement('div');wrap.className='fraction-wrap';wrap.dataset.frac=String(frac);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');if(frac<=0){svg.innerHTML=`<use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use>`;}else if(frac>=1){svg.innerHTML=`<use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use>`;}else{const fw=(24*frac).toFixed(3);const cf=`clipF_${run}_${i}`;svg.innerHTML=`<defs><clipPath id='${cf}'><rect width='${fw}' height='24'></rect></clipPath></defs><use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use><g clip-path='url(#${cf})'><use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use></g>`;}wrap.append(svg);container.append(wrap);}}function renderFractional(v){renderFractionalInto(avgStars,v);}
+  function buildStarButtons(container,onSelect){for(let i=1;i<=STAR_COUNT;i++){const b=document.createElement('button');b.className='star-btn';b.type='button';b.setAttribute('data-star',String(i));b.setAttribute('role','radio');b.setAttribute('aria-label',`${i} star${i>1?'s':''}`);b.setAttribute('aria-checked','false');const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.classList.add('star');const gBase=document.createElementNS('http://www.w3.org/2000/svg','g');gBase.classList.add('star-base');const baseUse=document.createElementNS('http://www.w3.org/2000/svg','use');baseUse.setAttribute('href','#star-shape');gBase.appendChild(baseUse);const gFill=document.createElementNS('http://www.w3.org/2000/svg','g');gFill.classList.add('star-fill');const fillUse=document.createElementNS('http://www.w3.org/2000/svg','use');fillUse.setAttribute('href','#star-shape');gFill.appendChild(fillUse);svg.append(gBase,gFill);b.append(svg);b.addEventListener('click',()=>onSelect(i,b));container.append(b);}}
+  function buildMultiRating(){if(!ratingGroupsContainer)return;ratingGroupsContainer.innerHTML='';pendingMap={};stationTitles.forEach((title,idx)=>{const group=document.createElement('div');group.className='rating-group';group.dataset.idx=String(idx);const label=document.createElement('div');label.className='rating-group-label';label.textContent=title;group.appendChild(label);const stars=document.createElement('div');stars.className='stars';stars.setAttribute('role','radiogroup');stars.setAttribute('aria-label',`Rate ${title}`);buildStarButtons(stars,(val)=>{pendingMap[idx]=val;paintMultiStars();const allPending=stationTitles.every((_,ti)=>pendingMap[ti]!=null);if(allPending&&submitWrapper)submitWrapper.classList.remove('hidden');});group.appendChild(stars);ratingGroupsContainer.appendChild(group);});}
+  function paintMultiStars(){if(!ratingGroupsContainer)return;ratingGroupsContainer.querySelectorAll('.rating-group').forEach((group,idx)=>{const p=pendingMap[idx]??0;group.querySelectorAll('.star-btn').forEach((b,si)=>{const star=si+1;const fill=b.querySelector('.star-fill');const active=p&&star<=p;if(fill)fill.style.opacity=active?'1':'0';b.classList.toggle('pending',!!active);b.setAttribute('aria-checked',p===star?'true':'false');});});}
+  function showMultiResultsPhase(aggs){clearAutoReturn();if(ratingGroupsContainer){ratingGroupsContainer.innerHTML='';stationTitles.forEach((title,idx)=>{const agg=aggs[idx];const{txt,v}=fmtAvg(agg.count,agg.total);const block=document.createElement('div');block.className='multi-avg-block';const lbl=document.createElement('div');lbl.className='multi-avg-label';lbl.textContent=title;const starsEl=document.createElement('div');starsEl.className='avg-stars';starsEl.setAttribute('aria-hidden','true');renderFractionalInto(starsEl,v);const line=document.createElement('div');line.className='avg-line';const rc=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';line.innerHTML=`${txt} out of 5 Stars <small>${rc}</small>`;block.append(lbl,starsEl,line);ratingGroupsContainer.appendChild(block);});ratingGroupsContainer.classList.remove('hidden');}if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=`Ratings submitted for ${stationTitles.join(' and ')}.`;startAutoReturn();}
   function flash(msg,err){if(statusDiv){statusDiv.textContent=msg;statusDiv.style.color=err?'var(--danger)':'var(--accent)';if(!err)setTimeout(()=>{if(statusDiv.textContent===msg)statusDiv.textContent='';},2000);}if(liveAnnouncer){liveAnnouncer.textContent=msg;}}
   function initId(id){currentId=id;localStorage.setItem('last-product-name',id);buildStars();showRatingPhase();}
   // Submit button handler
-  submitBtn?.addEventListener('click',()=>{if(pending){commitRating(pending);}});
+  submitBtn?.addEventListener('click',()=>{if(stationTitles.length>1){const allPending=stationTitles.every((_,idx)=>pendingMap[idx]!=null);if(!allPending)return;const aggs=stationTitles.map((title,idx)=>record(title,pendingMap[idx]));backupSnapshot();showMultiResultsPhase(aggs);}else if(pending){commitRating(pending);}});
   // Rate another handler
   rateAnotherBtn?.addEventListener('click',()=>goRateAnother());
   // Settings DOM wiring
   const settingReturnTimeout=document.getElementById('settingReturnTimeout');
   function applySettingsToUI(){if(settingReturnTimeout)settingReturnTimeout.value=String(kioskSettings.returnTimeoutSec);}
   settingReturnTimeout?.addEventListener('change',()=>{kioskSettings.returnTimeoutSec=Number(settingReturnTimeout.value)||10;saveSettings(kioskSettings);});
-  // Initial startup: prefer station config, then URL param, then setup screen
+  // ---- Logo position & visibility ----
+  function applyLogoPosition(){
+    const el=document.querySelector('.footer-logo');
+    if(!el)return;
+    el.style.position='';
+    el.style.bottom=kioskSettings.logoBottom+'%';
+    el.style.right=kioskSettings.logoRight+'%';
+    el.style.transform=`rotate(${kioskSettings.logoAngle||0}deg)`;
+    el.classList.remove('logo-force-dark','logo-force-light');
+    if(kioskSettings.logoVariant==='dark')el.classList.add('logo-force-dark');
+    else if(kioskSettings.logoVariant==='light')el.classList.add('logo-force-light');
+    if(!el.classList.contains('logo-editable')){
+      el.style.display=kioskSettings.logoVisible===false?'none':'';
+    }
+  }
+  let _logoEditListeners=null;
+  function enterLogoEditMode(){
+    if(_logoEditListeners)return;
+    if(adminOverlay)adminOverlay.classList.add('hidden');
+    const logoEl=document.querySelector('.footer-logo');
+    const panel=document.querySelector('.panel');
+    const editBar=document.getElementById('logoEditBar');
+    if(!logoEl||!panel||!editBar)return;
+    // Capture current viewport coords before switching to fixed
+    const lr=logoEl.getBoundingClientRect();
+    const fixedBottom=window.innerHeight-lr.bottom;
+    const fixedRight=window.innerWidth-lr.right;
+    // Switch to fixed layer so logo floats above everything
+    logoEl.style.position='fixed';
+    logoEl.style.bottom=fixedBottom+'px';
+    logoEl.style.right=fixedRight+'px';
+    logoEl.style.transform=`rotate(${kioskSettings.logoAngle||0}deg)`;
+    logoEl.style.display='';
+    logoEl.classList.add('logo-editable');
+    logoEl.classList.toggle('logo-hidden-preview',kioskSettings.logoVisible===false);
+    editBar.classList.remove('hidden');
+    // Sync rotation slider
+    const rotateSlider=document.getElementById('logoEditRotate');
+    const rotateValEl=document.getElementById('logoEditRotateVal');
+    if(rotateSlider)rotateSlider.value=String(kioskSettings.logoAngle||0);
+    if(rotateValEl)rotateValEl.textContent=(kioskSettings.logoAngle||0)+'°';
+    let startX,startY,startBottom,startRight,capturedId=null,hasMoved=false,isDown=false;
+    function onDown(e){
+      e.preventDefault();
+      logoEl.setPointerCapture(e.pointerId);
+      capturedId=e.pointerId;isDown=true;hasMoved=false;
+      startX=e.clientX;startY=e.clientY;
+      startBottom=parseFloat(logoEl.style.bottom)||0;
+      startRight=parseFloat(logoEl.style.right)||0;
+    }
+    function onMove(e){
+      if(!isDown)return;
+      const dx=e.clientX-startX,dy=e.clientY-startY;
+      if(Math.abs(dx)>6||Math.abs(dy)>6)hasMoved=true;
+      logoEl.style.bottom=(startBottom-dy)+'px';
+      logoEl.style.right=(startRight-dx)+'px';
+    }
+    function onUp(){
+      if(!isDown)return;
+      isDown=false;
+      if(capturedId!=null){try{logoEl.releasePointerCapture(capturedId);}catch{}capturedId=null;}
+      if(!hasMoved){
+        kioskSettings.logoVisible=!kioskSettings.logoVisible;
+        logoEl.classList.toggle('logo-hidden-preview',!kioskSettings.logoVisible);
+      }
+    }
+    function onRotate(){
+      const angle=Number(rotateSlider.value);
+      kioskSettings.logoAngle=angle;
+      logoEl.style.transform=`rotate(${angle}deg)`;
+      if(rotateValEl)rotateValEl.textContent=angle+'°';
+    }
+    logoEl.addEventListener('pointerdown',onDown);
+    logoEl.addEventListener('pointermove',onMove);
+    logoEl.addEventListener('pointerup',onUp);
+    logoEl.addEventListener('pointercancel',onUp);
+    if(rotateSlider)rotateSlider.addEventListener('input',onRotate);
+    // Logo variant (dark / light / auto) toggle
+    const variantBtn=document.getElementById('logoThemeToggle');
+    const _variantLabels={auto:'🌓',dark:'🌑',light:'☀️'};
+    function _syncVariantBtn(){if(variantBtn)variantBtn.textContent=_variantLabels[kioskSettings.logoVariant||'auto']||'🌓';}
+    function onVariantToggle(){const _cycle={auto:'dark',dark:'light',light:'auto'};kioskSettings.logoVariant=_cycle[kioskSettings.logoVariant||'auto']||'auto';logoEl.classList.remove('logo-force-dark','logo-force-light');if(kioskSettings.logoVariant==='dark')logoEl.classList.add('logo-force-dark');else if(kioskSettings.logoVariant==='light')logoEl.classList.add('logo-force-light');_syncVariantBtn();}
+    if(variantBtn)variantBtn.addEventListener('click',onVariantToggle);
+    _syncVariantBtn();
+    _logoEditListeners={el:logoEl,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle};
+    document.getElementById('logoEditDone').addEventListener('click',exitLogoEditMode,{once:true});
+  }
+  function exitLogoEditMode(){
+    const editBar=document.getElementById('logoEditBar');
+    if(editBar)editBar.classList.add('hidden');
+    if(_logoEditListeners){
+      const{el,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle}=_logoEditListeners;
+      el.removeEventListener('pointerdown',onDown);
+      el.removeEventListener('pointermove',onMove);
+      el.removeEventListener('pointerup',onUp);
+      el.removeEventListener('pointercancel',onUp);
+      if(rotateSlider&&onRotate)rotateSlider.removeEventListener('input',onRotate);
+      if(variantBtn&&onVariantToggle)variantBtn.removeEventListener('click',onVariantToggle);
+      // Convert fixed px coords back to panel-relative percentages
+      const panel=document.querySelector('.panel');
+      if(panel){
+        const pr=panel.getBoundingClientRect();
+        const lr=el.getBoundingClientRect();
+        kioskSettings.logoBottom=((pr.bottom-lr.bottom)/pr.height)*100;
+        kioskSettings.logoRight=((pr.right-lr.right)/pr.width)*100;
+      }
+      el.classList.remove('logo-editable','logo-hidden-preview');
+      _logoEditListeners=null;
+    }
+    saveSettings(kioskSettings);
+    applyLogoPosition();
+  }
+  document.getElementById('arrangeLogoBtn')?.addEventListener('click',enterLogoEditMode);
+  document.getElementById('setupArrangeLogoBtn')?.addEventListener('click',enterLogoEditMode);
   (function startupInit(){
     const cfg=loadStationConfig();
     if(cfg&&Array.isArray(cfg.titles)&&cfg.titles.length){
       stationTitles=cfg.titles;currentTitleIndex=0;
+      if(cfg.label&&yourLabel)yourLabel.textContent=cfg.label;
       idInputWrapper.classList.add('hidden');
       initId(stationTitles[0]);
       return;
@@ -226,6 +377,7 @@
   window.addEventListener('ratings-restored',()=>{ updateAdminStats(); });
   // Perform reconcile after listeners & potential init so UI can refresh immediately
   reconcileBackup();
+  applyLogoPosition();
   const kbdHint=document.getElementById('kbdHint');let hintShown=false;function showHint(){if(hintShown||!kbdHint)return;kbdHint.classList.remove('hidden');hintShown=true;}
   const topBar=document.querySelector('.top-bar');let hideTopTimer=null;function scheduleHide(){if(!topBar)return;clearTimeout(hideTopTimer);hideTopTimer=setTimeout(()=>{topBar.classList.add('autohide');},2600);}function showTopBar(){if(!topBar)return;const wasHidden=topBar.classList.contains('autohide');topBar.classList.remove('autohide');clearTimeout(hideTopTimer);hideTopTimer=setTimeout(()=>{topBar.classList.add('autohide');},wasHidden?3200:2600);}let inactivityTimer=null;const INACTIVITY_MS=3500;function resetInactivity(){if(!topBar)return;clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{if(window.__forceShowTopBar)return;topBar.classList.add('autohide');},INACTIVITY_MS);}function userActivity(e){if(e&&e.clientY!=null&&e.clientY<70){showTopBar();}else{if(e&&e.clientY!=null&&e.clientY<140){showTopBar();}}resetInactivity();}[ 'pointerdown','pointermove','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,userActivity,{passive:true}));window.addEventListener('orientationchange',()=>{setTimeout(()=>{resetInactivity();scheduleHide();},600);});window.addEventListener('resize',()=>{resetInactivity();});window.addEventListener('load',()=>{scheduleHide();resetInactivity();});document.addEventListener('pointerdown',e=>{if(e.clientY<90){showTopBar();}});document.addEventListener('mousemove',e=>{if(e.clientY<50){showTopBar();}});topBar?.addEventListener('pointerenter',()=>{clearTimeout(hideTopTimer);});topBar?.addEventListener('pointerleave',()=>{scheduleHide();});themeToggle.addEventListener('focus',showTopBar);fsToggle.addEventListener('focus',showTopBar);themeToggle.addEventListener('blur',scheduleHide);fsToggle.addEventListener('blur',scheduleHide);document.addEventListener('keydown',e=>{if(e.key==='Escape'){showTopBar();}});
   const netStatus=document.getElementById('netStatus');function updateOnline(){if(!netStatus)return;if(navigator.onLine){netStatus.style.display='none';}else{netStatus.style.display='block';}}window.addEventListener('online',updateOnline);window.addEventListener('offline',updateOnline);updateOnline();
@@ -260,37 +412,32 @@
   const reconfigStationBtn=document.getElementById('reconfigStation');
   const adminClose=document.querySelector('.admin-close');
   let wakeLockObj=null; let wakeRequested=false; let adminTapTimes=[]; let hotspotPressTimer=null; const HOT_CORNER_PX=70; let fallbackVideo=null; let fallbackActive=false;
+  let adminStatsTab=0;
+  function renderStatsBars(title,agg){const{txt,v}=fmtAvg(agg.count,agg.total);const maxBucket=Math.max(1,...agg.buckets);let html=`<div class="admin-stats-product">${title}</div>`;for(let i=5;i>=1;i--){const count=agg.buckets[i-1];const pct=agg.count?Math.round(count/agg.count*100):0;const barW=Math.round(count/maxBucket*100);html+=`<div class="admin-stats-row"><span class="admin-stats-star">${i}★</span><span class="admin-stats-count">${count}</span><div class="admin-stats-bar"><div class="admin-stats-bar-fill" style="width:${barW}%"></div></div><span class="admin-stats-pct">${pct}%</span></div>`;}html+=`<div class="admin-stats-totals">${agg.count} rating${agg.count===1?'':'s'} &nbsp;·&nbsp; avg ${txt==='--'?'—':txt+'★'} &nbsp;·&nbsp; ${new Date().toLocaleDateString()}</div>`;return html;}
   function updateAdminStats(){
     const cfg=loadStationConfig();
     if(adminStationId)adminStationId.textContent=cfg?cfg.stationId:'--';
-    if(!currentId){
+    const titles=stationTitles.length?stationTitles:(currentId?[currentId]:[]);
+    if(!titles.length){
       if(adminProduct)adminProduct.textContent='--';
       if(adminAvg)adminAvg.textContent='--';
       if(adminCount)adminCount.textContent='0';
       if(adminStats)adminStats.innerHTML='<div style="text-align:center;color:var(--muted);font-size:.75rem;padding:.4rem">No product selected.</div>';
       return;
     }
-    if(adminProduct)adminProduct.textContent=currentId+(stationTitles.length>1?' ('+stationTitles.join(', ')+')':'');
-    const agg=loadAgg(currentId);
+    if(adminStatsTab>=titles.length)adminStatsTab=0;
+    const activeTitle=titles[adminStatsTab];
+    if(adminProduct)adminProduct.textContent=activeTitle+(titles.length>1?' ('+titles.join(', ')+')':'');
+    const agg=loadAgg(activeTitle);
     const {txt,v}=fmtAvg(agg.count,agg.total);
     if(adminAvg)adminAvg.textContent=txt==='--'?'--':`${txt} (${(v/5*100).toFixed(1)}%)`;
     if(adminCount)adminCount.textContent=String(agg.count);
     if(!adminStats)return;
-    const maxBucket=Math.max(1,...agg.buckets);
-    let html=`<div class="admin-stats-product">${currentId}</div>`;
-    for(let i=5;i>=1;i--){
-      const count=agg.buckets[i-1];
-      const pct=agg.count?Math.round(count/agg.count*100):0;
-      const barW=Math.round(count/maxBucket*100);
-      html+=`<div class="admin-stats-row">
-        <span class="admin-stats-star">${'★'.repeat(i)}</span>
-        <span class="admin-stats-count">${count}</span>
-        <div class="admin-stats-bar"><div class="admin-stats-bar-fill" style="width:${barW}%"></div></div>
-        <span class="admin-stats-pct">${pct}%</span>
-      </div>`;
-    }
-    html+=`<div class="admin-stats-totals">${agg.count} rating${agg.count===1?'':'s'} &nbsp;·&nbsp; avg ${txt==='--'?'—':txt+'★'} &nbsp;·&nbsp; ${new Date().toLocaleDateString()}</div>`;
+    let html='';
+    if(titles.length>1){html+='<div class="admin-stats-tabs">';titles.forEach((t,i)=>{html+=`<button class="admin-stats-tab${i===adminStatsTab?' active':''}" data-tab="${i}" type="button">${t}</button>`;});html+='</div>';}
+    html+=renderStatsBars(activeTitle,agg);
     adminStats.innerHTML=html;
+    if(titles.length>1){adminStats.querySelectorAll('.admin-stats-tab').forEach(btn=>{btn.addEventListener('click',()=>{adminStatsTab=Number(btn.dataset.tab);updateAdminStats();});});}
   }  
   function updateOnlineAdmin(){if(adminOnline)adminOnline.textContent=navigator.onLine?'Yes':'No';}
   window.addEventListener('online',updateOnlineAdmin);window.addEventListener('offline',updateOnlineAdmin);updateOnlineAdmin();
@@ -315,6 +462,8 @@
   ['touchstart','mousedown'].forEach(ev=>document.addEventListener(ev,(e)=>{const pt=ev.startsWith('touch')?(e.touches&&e.touches[0]):e;if(!pt)return;if(ev==='mousedown'&&e.button!==0)return;if(!inHotCorner(pt.clientX,pt.clientY))return;hotspotCancel();hotspotPressTimer=setTimeout(()=>{openAdmin();},900);},{passive:true}));
   ['touchend','touchcancel','mouseup','mouseleave','blur'].forEach(ev=>document.addEventListener(ev,hotspotCancel));
   clearBtn?.addEventListener('click',()=>{if(!confirm('Clear ALL rating data?'))return;Object.keys(localStorage).filter(k=>k.startsWith('rating:mattress:')).forEach(k=>localStorage.removeItem(k));flash('All data cleared',false);updateAdminStats();if(currentId){showRatingPhase();}});
+  const seedDemoBtn=document.getElementById('seedDemo');
+  seedDemoBtn?.addEventListener('click',()=>{const titles=stationTitles.length?stationTitles:(currentId?[currentId]:[]);if(!titles.length){flash('No products configured.',true);return;}if(!confirm(`Add 20 random ratings to each of ${titles.length} product(s)?`))return;const weights=[5,10,20,35,30];function weightedRandom(){let r=Math.random()*100;for(let i=0;i<5;i++){r-=weights[i];if(r<=0)return i+1;}return 5;}titles.forEach(title=>{for(let i=0;i<20;i++)record(title,weightedRandom());});backupSnapshot();updateAdminStats();flash(`Seeded 20 ratings × ${titles.length} product(s)`,false);});
   const diagBox=document.getElementById('adminDiag');function populateDiag(){if(!diagBox)return;const vv=window.visualViewport;const mem=performance&&performance.memory?performance.memory:null;const lines=[];lines.push('UserAgent: '+navigator.userAgent);lines.push('Inner: '+window.innerWidth+'x'+window.innerHeight+' DPR '+window.devicePixelRatio);if(vv)lines.push('visualViewport: '+vv.width.toFixed(1)+'x'+vv.height.toFixed(1)+' scale '+vv.scale);lines.push('Revision: '+(window.__appRevision||'--'));lines.push('Keys: '+Object.keys(localStorage).filter(k=>k.startsWith('rating:mattress:')).length);if(currentId){const agg=loadAgg(currentId);lines.push('Current '+currentId+': '+agg.count+' ratings total='+agg.total);}if(mem){lines.push('JS Heap: '+(mem.usedJSHeapSize/1048576).toFixed(1)+'MB / '+(mem.jsHeapSizeLimit/1048576).toFixed(0)+'MB');}lines.push('Time: '+new Date().toLocaleString());diagBox.textContent=lines.join('\n');}
   diagToggle?.addEventListener('click',()=>{if(!diagBox)return;diagBox.classList.toggle('hidden');if(!diagBox.classList.contains('hidden')){populateDiag();}});window.addEventListener('resize',()=>{if(diagBox&&!diagBox.classList.contains('hidden'))populateDiag();});if(window.visualViewport){visualViewport.addEventListener('resize',()=>{if(diagBox&&!diagBox.classList.contains('hidden'))populateDiag();});}
   window.addEventListener('online',()=>updateOnlineAdmin());window.addEventListener('offline',()=>updateOnlineAdmin());
