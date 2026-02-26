@@ -83,9 +83,11 @@ svg.star { width:var(--star-size); height:var(--star-size); display:block; overf
 .footer-logo img { display:block; width:clamp(200px,48%,380px); height:auto }
 .footer-logo svg { display:none }
 /* Show only the correct logo for the active theme */
-html:not(.theme-light) .footer-logo .logo-light { display:none }
-html.theme-light .footer-logo .logo-dark { display:none }
+html:not(.theme-light) .footer-logo .logo-dark { display:none }
+html.theme-light .footer-logo .logo-light { display:none }
 .footer-logo.logo-editable { pointer-events:all; z-index:10; cursor:grab; opacity:1 !important; outline:2px dashed var(--accent); outline-offset:10px; border-radius:6px }
+/* While editing the logo position, let it extend beyond the panel so the full image is grabbable */
+.panel.logo-editing { overflow:visible; }
 .footer-logo.logo-editable:active { cursor:grabbing }
 .footer-logo.logo-editable.logo-hidden-preview { opacity:.25 !important }
 .logo-edit-bar { position:fixed; bottom:1.8rem; left:50%; transform:translateX(-50%); background:var(--panel-alt); border:1px solid #2a3239; border-radius:999px; padding:.55rem 1.1rem; display:flex; align-items:center; gap:.9rem; font-size:.75rem; color:var(--text); letter-spacing:.4px; z-index:400; box-shadow:0 6px 20px rgba(0,0,0,.45); white-space:nowrap }

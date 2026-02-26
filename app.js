@@ -226,11 +226,13 @@
   }
   let _logoEditListeners=null;
   function enterLogoEditMode(){
+    if(_logoEditListeners)return;
     if(adminOverlay)adminOverlay.classList.add('hidden');
     const logoEl=document.querySelector('.footer-logo');
     const panel=document.querySelector('.panel');
     const editBar=document.getElementById('logoEditBar');
     if(!logoEl||!panel||!editBar)return;
+    panel.classList.add('logo-editing');
     logoEl.style.display='';
     logoEl.classList.add('logo-editable');
     logoEl.classList.toggle('logo-hidden-preview',kioskSettings.logoVisible===false);
@@ -278,6 +280,7 @@
   }
   function exitLogoEditMode(){
     saveSettings(kioskSettings);
+    document.querySelector('.panel')?.classList.remove('logo-editing');
     const editBar=document.getElementById('logoEditBar');
     if(editBar)editBar.classList.add('hidden');
     if(_logoEditListeners){
