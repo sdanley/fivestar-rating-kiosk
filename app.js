@@ -120,6 +120,7 @@
   const setupLabelInput=document.getElementById('setupLabelInput');
   const setupLabelDisplay=document.getElementById('setupLabelDisplay');
   const setupLabelText=document.getElementById('setupLabelText');
+  const DEFAULT_RATING_LABEL='Rate the Feel of this Bed';
   const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0; let pendingMap={};
   // ---- Station Config & FNV-1a Hash ----
   const STATION_CONFIG_KEY='station:config';
@@ -139,7 +140,7 @@
   function clearAutoReturn(){if(autoReturnInterval){clearInterval(autoReturnInterval);autoReturnInterval=null;}}
   function startAutoReturn(){clearAutoReturn();let remaining=kioskSettings.returnTimeoutSec;if(autoCountdown)autoCountdown.textContent=remaining;autoReturnInterval=setInterval(()=>{remaining--;if(autoCountdown)autoCountdown.textContent=remaining;if(remaining<=0){clearAutoReturn();goRateAnother();}},1000);}
   function goRateAnother(){clearAutoReturn();selected=0;pending=0;pendingMap={};buildStars();showRatingPhase();}
-  function showRatingPhase(){if(stationTitles.length>1){heading.textContent='Rate the Feel of this Bed';if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');pendingMap={};buildMultiRating();}else{heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}}
+  function showRatingPhase(){if(stationTitles.length>1){heading.textContent=DEFAULT_RATING_LABEL;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');pendingMap={};buildMultiRating();}else{heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}}
   function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
   function selectPending(val){pending=val;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');showHint();}
   // ---- Setup Screen ----
@@ -149,7 +150,7 @@
   function _scheduleWiggle(){
     _cancelWiggle();
     _wiggleTimer=setTimeout(function tick(){
-      if(setupLabelDisplay&&!setupLabelDisplay.classList.contains('hidden')&&setupLabelInput?.classList.contains('hidden')){
+      if(setupLabelInput?.classList.contains('hidden')){
         setupLabelDisplay.classList.remove('wiggle');void setupLabelDisplay.offsetWidth;
         setupLabelDisplay.classList.add('wiggle');
       }
@@ -161,7 +162,7 @@
     if(setupLabelInput)setupLabelInput.classList.add('hidden');
     if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');
     const val=setupLabelInput?.value.trim()||'';
-    if(setupLabelText){setupLabelText.textContent=val||'Rate the Feel of this Bed';setupLabelText.style.opacity=val?'':'0.55';setupLabelText.style.fontStyle=val?'':'italic';}
+    if(setupLabelText){setupLabelText.textContent=val||DEFAULT_RATING_LABEL;setupLabelText.style.opacity=val?'':'0.55';setupLabelText.style.fontStyle=val?'':'italic';}
   }
   // Expand to full textarea (on tap)
   function _showLabelEdit(){
@@ -170,14 +171,14 @@
   }
   function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addSetupTitleInput('');updateStationIdPreview();}});inp.addEventListener('blur',()=>{if(!inp.value.trim()&&setupTitlesList&&setupTitlesList.querySelectorAll('.setup-title-input').length>1){inp.remove();updateStationIdPreview();}});if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
   function updateStationIdPreview(){if(!stationIdDisplay||!setupTitlesList)return;const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(titles.length){stationIdDisplay.textContent='Station ID: '+computeStationId(titles);}else{stationIdDisplay.textContent='';}}
-  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';const _cfg=loadStationConfig();const _savedLabel=_cfg?.label||'';if(setupLabelInput){setupLabelInput.value=_savedLabel;setupLabelInput.classList.add('hidden');}if(setupLabelText){setupLabelText.textContent=_savedLabel||'Rate the Feel of this Bed';setupLabelText.style.opacity=_savedLabel?'':'0.55';setupLabelText.style.fontStyle=_savedLabel?'':'italic';}if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');_scheduleWiggle();}
+  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';const _cfg=loadStationConfig();const _savedLabel=_cfg?.label||'';if(setupLabelInput){setupLabelInput.value=_savedLabel;setupLabelInput.classList.add('hidden');}if(setupLabelText){setupLabelText.textContent=_savedLabel||DEFAULT_RATING_LABEL;setupLabelText.style.opacity=_savedLabel?'':'0.55';setupLabelText.style.fontStyle=_savedLabel?'':'italic';}if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');_scheduleWiggle();}
   function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');_cancelWiggle();}
   setupLabelDisplay?.addEventListener('click',_showLabelEdit);
   setupLabelDisplay?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();_showLabelEdit();}});
   setupLabelInput?.addEventListener('blur',()=>setTimeout(_showLabelDisplay,120));
   addTitleBtn?.addEventListener('click',()=>{addSetupTitleInput('');updateStationIdPreview();});
   if(setupTitlesList){setupTitlesList.addEventListener('input',updateStationIdPreview);}
-  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});if(yourLabel)yourLabel.textContent=label||'Rate the Feel of this Bed';stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
+  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});if(yourLabel)yourLabel.textContent=label||DEFAULT_RATING_LABEL;stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
   function storageKey(id){return `rating:mattress:${id}`}
   function loadAgg(id){try{const raw=localStorage.getItem(storageKey(id));if(!raw)return{count:0,total:0,buckets:[0,0,0,0,0]};const p=JSON.parse(raw);if(!Array.isArray(p.buckets)||p.buckets.length!==5)p.buckets=[0,0,0,0,0];if(typeof p.count!== 'number'||typeof p.total!=='number')return{count:0,total:0,buckets:[0,0,0,0,0]};return p;}catch{return{count:0,total:0,buckets:[0,0,0,0,0]};}}
   function saveAgg(id,a){localStorage.setItem(storageKey(id),JSON.stringify(a))}
