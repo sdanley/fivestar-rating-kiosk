@@ -128,12 +128,13 @@
       <p id="subtitle" class="rating-text">Enter a name to begin</p>
 
       <div id="stationSetupWrapper" class="station-setup hidden">
-        <p class="setup-instructions">Configure this kiosk station<br>Enter the product name(s) to rate:</p>
+        <p class="setup-instructions">Configure this kiosk station</p>
+        <p class="setup-instructions">Enter the product name(s) to rate:</p>
         <div id="setupTitlesList" class="setup-titles-list"></div>
         <button id="addTitleBtn" type="button" class="setup-btn setup-btn-sec">&#43; Add Product</button>
         <div id="setupLabelDisplay" class="setup-label-display" role="button" tabindex="0" aria-label="Edit the rating prompt text">
           <span id="setupLabelText" class="setup-label-text">Rate the Feel of this Bed</span><span class="setup-label-edit-icon" aria-hidden="true"> ✎</span>
-        </div>
+        <textarea id="setupLabelInput" class="setup-title-input setup-label-input hidden" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Edit rating prompt text"></textarea>
         <textarea id="setupLabelInput" class="setup-title-input setup-label-input hidden" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
         <button id="saveStationBtn" type="button" class="setup-btn">Save &amp; Start</button>
         <button id="setupArrangeLogoBtn" type="button" class="setup-btn setup-btn-sec">Arrange Logo</button>
@@ -157,8 +158,8 @@
 
       <div id="status" class="status" aria-live="polite"></div>
       <div id="liveAnnouncer" class="visually-hidden" aria-live="polite"></div>
-      <div class="footer-logo" aria-label="Brand logo">
-        <img class="logo-dark" src="assets/logo-dark.png" alt="Brand logo" />
+        <img class="logo-dark" src="assets/logo-dark.png" alt="" aria-hidden="true" />
+        <img class="logo-light" src="assets/logo-light.png" alt="" aria-hidden="true" />
         <img class="logo-light" src="assets/logo-light.png" alt="Brand logo" />
       </div>
     </div>

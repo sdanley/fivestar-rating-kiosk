@@ -132,6 +132,10 @@
   function saveStationConfig(cfg){localStorage.setItem(STATION_CONFIG_KEY,JSON.stringify(cfg));}
   // ---- Kiosk Settings ----
   const SETTINGS_KEY='kiosk:settings';
+  // NOTE: logoBottom and logoRight use small negative percentages intentionally to let
+  // the logo overflow slightly beyond the viewport edge. This overflow behavior is
+  // relied upon by current layouts and should not be changed to positive offsets
+  // without updating the corresponding positioning logic and design.
   const DEFAULT_SETTINGS={returnTimeoutSec:10,logoVisible:true,logoBottom:-8,logoRight:-5,logoAngle:0,logoVariant:'auto'};
   function loadSettings(){try{const raw=localStorage.getItem(SETTINGS_KEY);if(!raw)return Object.assign({},DEFAULT_SETTINGS);return Object.assign({},DEFAULT_SETTINGS,JSON.parse(raw));}catch{return Object.assign({},DEFAULT_SETTINGS);}}
   function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
@@ -165,7 +169,37 @@
     if(setupLabelText){setupLabelText.textContent=val||DEFAULT_RATING_LABEL;setupLabelText.style.opacity=val?'':'0.55';setupLabelText.style.fontStyle=val?'':'italic';}
   }
   // Expand to full textarea (on tap)
-  function _showLabelEdit(){
+  function addSetupTitleInput(val){
+    const inp = document.createElement('input');
+    inp.className = 'setup-title-input';
+    inp.placeholder = 'Product Name';
+    inp.maxLength = 60;
+    inp.autocomplete = 'off';
+    if (val) inp.value = val;
+
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addSetupTitleInput('');
+        updateStationIdPreview();
+      }
+    });
+
+    inp.addEventListener('blur', () => {
+      const shouldRemove =
+        !inp.value.trim() &&
+        setupTitlesList &&
+        setupTitlesList.querySelectorAll('.setup-title-input').length > 1;
+
+      if (shouldRemove) {
+        inp.remove();
+        updateStationIdPreview();
+      }
+    });
+
+    if (setupTitlesList) setupTitlesList.appendChild(inp);
+    inp.focus();
+  }
     if(setupLabelDisplay)setupLabelDisplay.classList.add('hidden');
     if(setupLabelInput){setupLabelInput.classList.remove('hidden');setupLabelInput.focus();}
   }
@@ -193,11 +227,17 @@
       const req=indexedDB.open(PERSIST_DB,1);
       req.onupgradeneeded=()=>{const db=req.result; if(!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');};
       req.onsuccess=()=>resolve(req.result);
-      req.onerror=()=>reject(req.error);
-    });
-    return idbReady;
-  }
-  function gatherSnapshot(){const snap={};for(const k of Object.keys(localStorage)){if(k.startsWith('rating:mattress:')){snap[k]=localStorage.getItem(k);}}return snap;}
+  function fmtAvg(c,t){if(c===0)return{txt:'--',v:0};const v=t/c;return{txt:v.toFixed(2).replace(/\.00$/, '').replace(/(\.[0-9])0$/, '$1'),v};}
+  // Build the primary single-station star controls.
+  // Click/select behavior is delegated to buildStarButtons; hover behavior for stars
+  // is intentionally bound in a separate initialization step elsewhere in this file.
+  function buildStars(){starsContainer.innerHTML='';buildStarButtons(starsContainer,(val)=>{if(!currentId){flash('Enter a name first.',true);return;}selectPending(val);});}
+  function commitRating(val){selected=val;pending=0;const agg=record(currentId,val);paintStars();if(kbdHint){kbdHint.classList.add('hidden');}backupSnapshot();showResultsPhase(agg);}
+  function paintStars(){[...starsContainer.children].forEach((b,idx)=>{const star=idx+1;const fill=b.querySelector('.star-fill');const active=(hoverVal?star<=hoverVal:(pending?star<=pending:(selected&&star<=selected)));if(fill)fill.style.opacity=active?'1':'0';b.classList.toggle('on',selected&&star<=selected);b.classList.toggle('pending',pending&&star<=pending&&!selected);b.setAttribute('aria-checked',selected===star?'true':'false');if(pending===star&&!selected)b.setAttribute('aria-checked','true');});}
+  let fractionalRenderRun=0;function renderFractionalInto(container,v){container.innerHTML='';fractionalRenderRun++;const run=fractionalRenderRun;for(let i=1;i<=STAR_COUNT;i++){const frac=Math.min(Math.max(v-(i-1),0),1);const wrap=document.createElement('div');wrap.className='fraction-wrap';wrap.dataset.frac=String(frac);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');if(frac<=0){svg.innerHTML=`<use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use>`;}else if(frac>=1){svg.innerHTML=`<use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use>`;}else{const fw=(24*frac).toFixed(3);const cf=`clipF_${run}_${i}`;svg.innerHTML=`<defs><clipPath id='${cf}'><rect width='${fw}' height='24'></rect></clipPath></defs><use href='#star-shape' fill='none' stroke='var(--outline)' stroke-width='2'></use><g clip-path='url(#${cf})'><use href='#star-shape' fill='var(--accent)'></use><use href='#star-shape' fill='none' stroke='var(--accent)' stroke-width='2'></use></g>`;}wrap.append(svg);container.append(wrap);}}function renderFractional(v){renderFractionalInto(avgStars,v);}
+  // Helper to construct star button elements. This function only attaches click
+  // handlers for selection; any hover behavior on stars is managed separately so
+  // that it can be reused or configured at a higher level.
   async function backupSnapshot(force){const now=Date.now(); if(!force && now-lastBackup<BACKUP_INTERVAL) return; lastBackup=now; try{const db=await openIDB();const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put({ts:Date.now(),data:gatherSnapshot()},'snapshot');}catch{}}
   async function reconcileBackup(){
     try{
@@ -286,7 +326,17 @@
     const rotateSlider=document.getElementById('logoEditRotate');
     const rotateValEl=document.getElementById('logoEditRotateVal');
     if(rotateSlider)rotateSlider.value=String(kioskSettings.logoAngle||0);
-    if(rotateValEl)rotateValEl.textContent=(kioskSettings.logoAngle||0)+'°';
+    const _variantAriaLabels={auto:'Auto logo theme',dark:'Dark logo theme',light:'Light logo theme'};
+    function _syncVariantBtn(){
+      if(variantBtn){
+        const variant=kioskSettings.logoVariant||'auto';
+        const emojiLabel=_variantLabels[variant]||'🌓';
+        const textLabel=_variantAriaLabels[variant]||'Logo theme';
+        variantBtn.textContent=emojiLabel;
+        variantBtn.setAttribute('aria-label',textLabel);
+        variantBtn.setAttribute('title',textLabel);
+      }
+    }
     let startX,startY,startBottom,startRight,capturedId=null,hasMoved=false,isDown=false;
     function onDown(e){
       e.preventDefault();
@@ -412,8 +462,63 @@
   const reconfigStationBtn=document.getElementById('reconfigStation');
   const adminClose=document.querySelector('.admin-close');
   let wakeLockObj=null; let wakeRequested=false; let adminTapTimes=[]; let hotspotPressTimer=null; const HOT_CORNER_PX=70; let fallbackVideo=null; let fallbackActive=false;
-  let adminStatsTab=0;
-  function renderStatsBars(title,agg){const{txt,v}=fmtAvg(agg.count,agg.total);const maxBucket=Math.max(1,...agg.buckets);let html=`<div class="admin-stats-product">${title}</div>`;for(let i=5;i>=1;i--){const count=agg.buckets[i-1];const pct=agg.count?Math.round(count/agg.count*100):0;const barW=Math.round(count/maxBucket*100);html+=`<div class="admin-stats-row"><span class="admin-stats-star">${i}★</span><span class="admin-stats-count">${count}</span><div class="admin-stats-bar"><div class="admin-stats-bar-fill" style="width:${barW}%"></div></div><span class="admin-stats-pct">${pct}%</span></div>`;}html+=`<div class="admin-stats-totals">${agg.count} rating${agg.count===1?'':'s'} &nbsp;·&nbsp; avg ${txt==='--'?'—':txt+'★'} &nbsp;·&nbsp; ${new Date().toLocaleDateString()}</div>`;return html;}
+  /**
+   * Seed demo ratings for configured product titles.
+   *
+   * This helper adds 20 synthetic ratings to each selected product, using
+   * a simple weighted random distribution for star values:
+   *   1★:  5%, 2★: 10%, 3★: 20%, 4★: 35%, 5★: 30%.
+   *
+   * It respects the current kiosk configuration by:
+   *   - Using all `stationTitles` if available, otherwise
+   *   - Falling back to the current product (`currentId`) if set.
+   *
+   * Side effects (unchanged from the original inline implementation):
+   *   - Shows an error flash if no products are configured.
+   *   - Prompts the operator for confirmation before seeding.
+   *   - Records 20 ratings per product via `record()`.
+   *   - Triggers `backupSnapshot()` and `updateAdminStats()`.
+   *   - Shows a success flash when seeding is complete.
+   */
+  function seedDemoRatings() {
+    const titles = stationTitles.length
+      ? stationTitles
+      : (currentId ? [currentId] : []);
+
+    if (!titles.length) {
+      flash('No products configured.', true);
+      return;
+    }
+
+    if (!confirm(`Add 20 random ratings to each of ${titles.length} product(s)?`)) {
+      return;
+    }
+
+    const weights = [5, 10, 20, 35, 30]; // percentage weights for 1★..5★
+
+    function weightedRandom() {
+      let r = Math.random() * 100;
+      for (let i = 0; i < 5; i++) {
+        r -= weights[i];
+        if (r <= 0) return i + 1;
+      }
+      // Fallback to 5★ if rounding or weight drift leaves residual.
+      return 5;
+    }
+
+    titles.forEach(title => {
+      for (let i = 0; i < 20; i++) {
+        record(title, weightedRandom());
+      }
+    });
+
+    backupSnapshot();
+    updateAdminStats();
+    flash(`Seeded 20 ratings × ${titles.length} product(s)`, false);
+  }
+
+  const seedDemoBtn=document.getElementById('seedDemo');
+  seedDemoBtn?.addEventListener('click', seedDemoRatings);
   function updateAdminStats(){
     const cfg=loadStationConfig();
     if(adminStationId)adminStationId.textContent=cfg?cfg.stationId:'--';
