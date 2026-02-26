@@ -104,7 +104,7 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 .admin-stats { background:var(--panel-alt); border:1px solid #2a3239; border-radius:16px; padding:.9rem 1rem; margin-top:.6rem; }
 .admin-stats-product { font-size:.8rem; font-weight:700; letter-spacing:.4px; text-align:center; margin-bottom:.55rem; color:var(--text); }
 .admin-stats-row { display:flex; align-items:center; gap:.55rem; margin:.3rem 0; }
-.admin-stats-star { font-size:.88rem; font-weight:700; min-width:2.1rem; color:var(--text); }
+.admin-stats-star { font-size:.88rem; font-weight:700; min-width:2.1rem; color:var(--text); text-align:right; }
 .admin-stats-count { font-size:1rem; font-weight:700; min-width:2.4rem; text-align:right; color:var(--text); font-family:ui-monospace,monospace; }
 .admin-stats-pct { font-size:.7rem; color:var(--muted); min-width:3rem; text-align:right; font-family:ui-monospace,monospace; }
 .admin-stats-bar { flex:1; height:9px; background:#2a3239; border-radius:5px; overflow:hidden; }
@@ -149,3 +149,7 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 .rating-group-label { font-size:clamp(1rem,1.6vw,1.3rem); font-weight:700; color:var(--text); letter-spacing:.6px; margin-bottom:.35rem; text-align:center; }
 .multi-avg-block { display:flex; flex-direction:column; align-items:center; width:100%; padding:.5rem 0; }
 .multi-avg-label { font-size:clamp(.9rem,1.4vw,1.15rem); font-weight:700; color:var(--muted); letter-spacing:.55px; margin-bottom:.3rem; text-align:center; }
+/* Admin stats tabs */
+.admin-stats-tabs { display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:.6rem; }
+.admin-stats-tab { flex:1; background:var(--panel); border:1px solid #2a3239; color:var(--muted); border-radius:10px; padding:.35rem .6rem; font-size:.72rem; cursor:pointer; font-weight:600; letter-spacing:.4px; transition:background .2s,color .2s; }
+.admin-stats-tab.active { background:var(--accent); color:#222; border-color:var(--accent); }
