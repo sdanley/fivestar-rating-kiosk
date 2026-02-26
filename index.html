@@ -131,9 +131,12 @@
         <p class="setup-instructions">Configure this kiosk station<br>Enter the product name(s) to rate:</p>
         <div id="setupTitlesList" class="setup-titles-list"></div>
         <button id="addTitleBtn" type="button" class="setup-btn setup-btn-sec">&#43; Add Product</button>
-        <p class="setup-label-hint">Rating prompt shown above the stars:</p>
-        <textarea id="setupLabelInput" class="setup-title-input setup-label-input" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+        <div id="setupLabelDisplay" class="setup-label-display" role="button" tabindex="0" aria-label="Edit the rating prompt text">
+          <span id="setupLabelText" class="setup-label-text">Rate the Feel of this Bed</span><span class="setup-label-edit-icon" aria-hidden="true"> ✎</span>
+        </div>
+        <textarea id="setupLabelInput" class="setup-title-input setup-label-input hidden" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
         <button id="saveStationBtn" type="button" class="setup-btn">Save &amp; Start</button>
+        <button id="setupArrangeLogoBtn" type="button" class="setup-btn setup-btn-sec">Arrange Logo</button>
         <div id="stationIdDisplay" class="station-id-display"></div>
       </div>
 
@@ -168,6 +171,8 @@
       <input type="range" id="logoEditRotate" class="logo-rotate-slider" min="-45" max="45" value="0" step="1" aria-label="Rotation angle">
       <span id="logoEditRotateVal" class="logo-edit-rotate-val">0°</span>
     </label>
+    <span class="logo-edit-bar-sep"></span>
+    <button id="logoThemeToggle" type="button" class="logo-edit-theme-btn" title="Toggle logo variant: auto / dark / light">🌓</button>
     <span class="logo-edit-bar-sep"></span>
     <button id="logoEditDone" type="button">Done</button>
   </div>

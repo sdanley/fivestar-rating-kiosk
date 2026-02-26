@@ -118,6 +118,8 @@
   const saveStationBtn=document.getElementById('saveStationBtn');
   const addTitleBtn=document.getElementById('addTitleBtn');
   const setupLabelInput=document.getElementById('setupLabelInput');
+  const setupLabelDisplay=document.getElementById('setupLabelDisplay');
+  const setupLabelText=document.getElementById('setupLabelText');
   const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0; let pendingMap={};
   // ---- Station Config & FNV-1a Hash ----
   const STATION_CONFIG_KEY='station:config';
@@ -129,7 +131,7 @@
   function saveStationConfig(cfg){localStorage.setItem(STATION_CONFIG_KEY,JSON.stringify(cfg));}
   // ---- Kiosk Settings ----
   const SETTINGS_KEY='kiosk:settings';
-  const DEFAULT_SETTINGS={returnTimeoutSec:10,logoVisible:true,logoBottom:-8,logoRight:-5,logoAngle:0};
+  const DEFAULT_SETTINGS={returnTimeoutSec:10,logoVisible:true,logoBottom:-8,logoRight:-5,logoAngle:0,logoVariant:'auto'};
   function loadSettings(){try{const raw=localStorage.getItem(SETTINGS_KEY);if(!raw)return Object.assign({},DEFAULT_SETTINGS);return Object.assign({},DEFAULT_SETTINGS,JSON.parse(raw));}catch{return Object.assign({},DEFAULT_SETTINGS);}}
   function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
   let kioskSettings=loadSettings();
@@ -141,10 +143,38 @@
   function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
   function selectPending(val){pending=val;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');showHint();}
   // ---- Setup Screen ----
-  function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;inp.addEventListener('blur',()=>{if(!inp.value.trim()&&setupTitlesList&&setupTitlesList.querySelectorAll('.setup-title-input').length>1){inp.remove();updateStationIdPreview();}});if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
+  // Wiggle scheduler for the subtle label display
+  let _wiggleTimer=null;
+  function _cancelWiggle(){clearTimeout(_wiggleTimer);_wiggleTimer=null;}
+  function _scheduleWiggle(){
+    _cancelWiggle();
+    _wiggleTimer=setTimeout(function tick(){
+      if(setupLabelDisplay&&!setupLabelDisplay.classList.contains('hidden')&&setupLabelInput?.classList.contains('hidden')){
+        setupLabelDisplay.classList.remove('wiggle');void setupLabelDisplay.offsetWidth;
+        setupLabelDisplay.classList.add('wiggle');
+      }
+      _wiggleTimer=setTimeout(tick,8000+Math.random()*5000);
+    },6000+Math.random()*5000);
+  }
+  // Show the subtle ghost display (collapse textarea)
+  function _showLabelDisplay(){
+    if(setupLabelInput)setupLabelInput.classList.add('hidden');
+    if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');
+    const val=setupLabelInput?.value.trim()||'';
+    if(setupLabelText){setupLabelText.textContent=val||'Rate the Feel of this Bed';setupLabelText.style.opacity=val?'':'0.55';setupLabelText.style.fontStyle=val?'':'italic';}
+  }
+  // Expand to full textarea (on tap)
+  function _showLabelEdit(){
+    if(setupLabelDisplay)setupLabelDisplay.classList.add('hidden');
+    if(setupLabelInput){setupLabelInput.classList.remove('hidden');setupLabelInput.focus();}
+  }
+  function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addSetupTitleInput('');updateStationIdPreview();}});inp.addEventListener('blur',()=>{if(!inp.value.trim()&&setupTitlesList&&setupTitlesList.querySelectorAll('.setup-title-input').length>1){inp.remove();updateStationIdPreview();}});if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
   function updateStationIdPreview(){if(!stationIdDisplay||!setupTitlesList)return;const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(titles.length){stationIdDisplay.textContent='Station ID: '+computeStationId(titles);}else{stationIdDisplay.textContent='';}}
-  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';if(setupLabelInput){const cfg=loadStationConfig();setupLabelInput.value=cfg?.label||'';}}
-  function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');}
+  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';const _cfg=loadStationConfig();const _savedLabel=_cfg?.label||'';if(setupLabelInput){setupLabelInput.value=_savedLabel;setupLabelInput.classList.add('hidden');}if(setupLabelText){setupLabelText.textContent=_savedLabel||'Rate the Feel of this Bed';setupLabelText.style.opacity=_savedLabel?'':'0.55';setupLabelText.style.fontStyle=_savedLabel?'':'italic';}if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');_scheduleWiggle();}
+  function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');_cancelWiggle();}
+  setupLabelDisplay?.addEventListener('click',_showLabelEdit);
+  setupLabelDisplay?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();_showLabelEdit();}});
+  setupLabelInput?.addEventListener('blur',()=>setTimeout(_showLabelDisplay,120));
   addTitleBtn?.addEventListener('click',()=>{addSetupTitleInput('');updateStationIdPreview();});
   if(setupTitlesList){setupTitlesList.addEventListener('input',updateStationIdPreview);}
   saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});if(yourLabel)yourLabel.textContent=label||'Rate the Feel of this Bed';stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
@@ -223,6 +253,9 @@
     el.style.bottom=kioskSettings.logoBottom+'%';
     el.style.right=kioskSettings.logoRight+'%';
     el.style.transform=`rotate(${kioskSettings.logoAngle||0}deg)`;
+    el.classList.remove('logo-force-dark','logo-force-light');
+    if(kioskSettings.logoVariant==='dark')el.classList.add('logo-force-dark');
+    else if(kioskSettings.logoVariant==='light')el.classList.add('logo-force-light');
     if(!el.classList.contains('logo-editable')){
       el.style.display=kioskSettings.logoVisible===false?'none':'';
     }
@@ -289,19 +322,27 @@
     logoEl.addEventListener('pointerup',onUp);
     logoEl.addEventListener('pointercancel',onUp);
     if(rotateSlider)rotateSlider.addEventListener('input',onRotate);
-    _logoEditListeners={el:logoEl,onDown,onMove,onUp,rotateSlider,onRotate};
+    // Logo variant (dark / light / auto) toggle
+    const variantBtn=document.getElementById('logoThemeToggle');
+    const _variantLabels={auto:'🌓',dark:'🌑',light:'☀️'};
+    function _syncVariantBtn(){if(variantBtn)variantBtn.textContent=_variantLabels[kioskSettings.logoVariant||'auto']||'🌓';}
+    function onVariantToggle(){const _cycle={auto:'dark',dark:'light',light:'auto'};kioskSettings.logoVariant=_cycle[kioskSettings.logoVariant||'auto']||'auto';logoEl.classList.remove('logo-force-dark','logo-force-light');if(kioskSettings.logoVariant==='dark')logoEl.classList.add('logo-force-dark');else if(kioskSettings.logoVariant==='light')logoEl.classList.add('logo-force-light');_syncVariantBtn();}
+    if(variantBtn)variantBtn.addEventListener('click',onVariantToggle);
+    _syncVariantBtn();
+    _logoEditListeners={el:logoEl,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle};
     document.getElementById('logoEditDone').addEventListener('click',exitLogoEditMode,{once:true});
   }
   function exitLogoEditMode(){
     const editBar=document.getElementById('logoEditBar');
     if(editBar)editBar.classList.add('hidden');
     if(_logoEditListeners){
-      const{el,onDown,onMove,onUp,rotateSlider,onRotate}=_logoEditListeners;
+      const{el,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle}=_logoEditListeners;
       el.removeEventListener('pointerdown',onDown);
       el.removeEventListener('pointermove',onMove);
       el.removeEventListener('pointerup',onUp);
       el.removeEventListener('pointercancel',onUp);
       if(rotateSlider&&onRotate)rotateSlider.removeEventListener('input',onRotate);
+      if(variantBtn&&onVariantToggle)variantBtn.removeEventListener('click',onVariantToggle);
       // Convert fixed px coords back to panel-relative percentages
       const panel=document.querySelector('.panel');
       if(panel){
@@ -317,6 +358,7 @@
     applyLogoPosition();
   }
   document.getElementById('arrangeLogoBtn')?.addEventListener('click',enterLogoEditMode);
+  document.getElementById('setupArrangeLogoBtn')?.addEventListener('click',enterLogoEditMode);
   (function startupInit(){
     const cfg=loadStationConfig();
     if(cfg&&Array.isArray(cfg.titles)&&cfg.titles.length){

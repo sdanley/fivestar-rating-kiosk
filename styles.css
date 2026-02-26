@@ -163,7 +163,21 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 .setup-title-input { background:var(--panel-alt); border:2px solid #273039; color:var(--text); padding:.85rem 1.1rem; font-size:1.2rem; border-radius:22px; text-align:center; letter-spacing:.5px; font-weight:600; -webkit-user-select:text; user-select:text; width:100%; }
 .setup-title-input:focus { outline:none; box-shadow:var(--focus); border-color:var(--accent); }
 textarea.setup-title-input { resize:none; line-height:1.45; min-height:5.2rem; font-family:inherit; }
-.setup-label-hint { margin:.45rem 0 .2rem; font-size:.78rem; color:var(--muted); letter-spacing:.4px; width:100%; text-align:left; }
+/* Subtle label ghost display (setup screen) */
+.setup-label-display { width:100%; padding:.65rem 1.1rem; border:2px dashed rgba(255,204,51,.28); border-radius:22px; cursor:pointer; color:var(--muted); font-size:1.05rem; font-weight:600; letter-spacing:.45px; display:flex; align-items:center; justify-content:center; gap:.3rem; background:transparent; transition:border-color .25s,color .2s,background .2s; -webkit-user-select:none; user-select:none; }
+html.theme-light .setup-label-display { border-color:rgba(209,143,0,.35); }
+.setup-label-display:hover, .setup-label-display:focus-visible { border-color:var(--accent); color:var(--text); background:rgba(255,204,51,.05); outline:none; box-shadow:var(--focus); }
+.setup-label-edit-icon { font-size:.75rem; opacity:.45; flex-shrink:0; }
+@keyframes setup-label-wiggle { 0%,100%{transform:translateX(0) rotate(0deg)} 20%{transform:translateX(-4px) rotate(-.8deg)} 40%{transform:translateX(4px) rotate(.8deg)} 62%{transform:translateX(-2px) rotate(-.4deg)} 80%{transform:translateX(2px) rotate(.4deg)} }
+.setup-label-display.wiggle { animation:setup-label-wiggle .55s ease; }
+/* Logo variant override classes */
+.footer-logo.logo-force-dark .logo-light { display:none !important }
+.footer-logo.logo-force-dark .logo-dark  { display:block !important }
+.footer-logo.logo-force-light .logo-dark  { display:none !important }
+.footer-logo.logo-force-light .logo-light { display:block !important }
+/* Logo edit bar theme toggle button */
+.logo-edit-theme-btn { background:transparent; border:1px solid rgba(255,255,255,.18); border-radius:999px; padding:.28rem .7rem; font-size:.85rem; color:var(--text); cursor:pointer; transition:background .2s,border-color .2s; }
+.logo-edit-theme-btn:hover { background:var(--panel); border-color:var(--accent); }
 .setup-btn { background:var(--accent); color:#222; font-size:1rem; font-weight:650; padding:.8rem 1.8rem; border:none; border-radius:999px; cursor:pointer; letter-spacing:.55px; box-shadow:0 5px 16px -6px rgba(0,0,0,.5); min-width:160px; }
 .setup-btn.setup-btn-sec { background:var(--panel-alt); color:var(--text); border:2px solid #2a3239; box-shadow:none; }
 .station-id-display { font-family:ui-monospace,monospace; font-size:.72rem; color:var(--muted); letter-spacing:.7px; margin-top:.15rem; }
