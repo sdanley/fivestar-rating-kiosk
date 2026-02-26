@@ -126,7 +126,7 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 .admin-stats { background:var(--panel-alt); border:1px solid #2a3239; border-radius:16px; padding:.9rem 1rem; margin-top:.6rem; }
 .admin-stats-product { font-size:.8rem; font-weight:700; letter-spacing:.4px; text-align:center; margin-bottom:.55rem; color:var(--text); }
 .admin-stats-row { display:flex; align-items:center; gap:.55rem; margin:.3rem 0; }
-.admin-stats-star { font-size:.88rem; font-weight:700; min-width:2.1rem; color:var(--text); text-align:right; }
+.admin-stats-star { font-size:.88rem; font-weight:700; min-width:2.1rem; color:var(--text); text-align:left; }
 .admin-stats-count { font-size:1rem; font-weight:700; min-width:2.4rem; text-align:right; color:var(--text); font-family:ui-monospace,monospace; }
 .admin-stats-pct { font-size:.7rem; color:var(--muted); min-width:3rem; text-align:right; font-family:ui-monospace,monospace; }
 .admin-stats-bar { flex:1; height:9px; background:#2a3239; border-radius:5px; overflow:hidden; }
