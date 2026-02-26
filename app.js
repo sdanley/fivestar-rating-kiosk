@@ -128,7 +128,7 @@
   function saveStationConfig(cfg){localStorage.setItem(STATION_CONFIG_KEY,JSON.stringify(cfg));}
   // ---- Kiosk Settings ----
   const SETTINGS_KEY='kiosk:settings';
-  const DEFAULT_SETTINGS={returnTimeoutSec:10};
+  const DEFAULT_SETTINGS={returnTimeoutSec:10,logoVisible:true,logoBottom:-8,logoRight:-5};
   function loadSettings(){try{const raw=localStorage.getItem(SETTINGS_KEY);if(!raw)return Object.assign({},DEFAULT_SETTINGS);return Object.assign({},DEFAULT_SETTINGS,JSON.parse(raw));}catch{return Object.assign({},DEFAULT_SETTINGS);}}
   function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
   let kioskSettings=loadSettings();
@@ -214,6 +214,84 @@
   const settingReturnTimeout=document.getElementById('settingReturnTimeout');
   function applySettingsToUI(){if(settingReturnTimeout)settingReturnTimeout.value=String(kioskSettings.returnTimeoutSec);}
   settingReturnTimeout?.addEventListener('change',()=>{kioskSettings.returnTimeoutSec=Number(settingReturnTimeout.value)||10;saveSettings(kioskSettings);});
+  // ---- Logo position & visibility ----
+  function applyLogoPosition(){
+    const el=document.querySelector('.footer-logo');
+    if(!el)return;
+    el.style.bottom=kioskSettings.logoBottom+'%';
+    el.style.right=kioskSettings.logoRight+'%';
+    if(!el.classList.contains('logo-editable')){
+      el.style.display=kioskSettings.logoVisible===false?'none':'';
+    }
+  }
+  let _logoEditListeners=null;
+  function enterLogoEditMode(){
+    if(adminOverlay)adminOverlay.classList.add('hidden');
+    const logoEl=document.querySelector('.footer-logo');
+    const panel=document.querySelector('.panel');
+    const editBar=document.getElementById('logoEditBar');
+    if(!logoEl||!panel||!editBar)return;
+    logoEl.style.display='';
+    logoEl.classList.add('logo-editable');
+    logoEl.classList.toggle('logo-hidden-preview',kioskSettings.logoVisible===false);
+    editBar.classList.remove('hidden');
+    let startX,startY,startBottom,startRight,capturedId=null,hasMoved=false,isDown=false;
+    function onDown(e){
+      e.preventDefault();
+      logoEl.setPointerCapture(e.pointerId);
+      capturedId=e.pointerId;
+      isDown=true;hasMoved=false;
+      startX=e.clientX;startY=e.clientY;
+      const pr=panel.getBoundingClientRect();
+      const lr=logoEl.getBoundingClientRect();
+      startBottom=((pr.bottom-lr.bottom)/pr.height)*100;
+      startRight=((pr.right-lr.right)/pr.width)*100;
+    }
+    function onMove(e){
+      if(!isDown)return;
+      const dx=e.clientX-startX,dy=e.clientY-startY;
+      if(Math.abs(dx)>6||Math.abs(dy)>6)hasMoved=true;
+      const pr=panel.getBoundingClientRect();
+      logoEl.style.bottom=(startBottom-(dy/pr.height)*100)+'%';
+      logoEl.style.right=(startRight-(dx/pr.width)*100)+'%';
+    }
+    function onUp(){
+      if(!isDown)return;
+      isDown=false;
+      if(capturedId!=null){try{logoEl.releasePointerCapture(capturedId);}catch{}capturedId=null;}
+      if(!hasMoved){
+        kioskSettings.logoVisible=!kioskSettings.logoVisible;
+        logoEl.classList.toggle('logo-hidden-preview',!kioskSettings.logoVisible);
+      } else {
+        const pr=panel.getBoundingClientRect();
+        const lr=logoEl.getBoundingClientRect();
+        kioskSettings.logoBottom=((pr.bottom-lr.bottom)/pr.height)*100;
+        kioskSettings.logoRight=((pr.right-lr.right)/pr.width)*100;
+      }
+    }
+    logoEl.addEventListener('pointerdown',onDown);
+    logoEl.addEventListener('pointermove',onMove);
+    logoEl.addEventListener('pointerup',onUp);
+    logoEl.addEventListener('pointercancel',onUp);
+    _logoEditListeners={el:logoEl,onDown,onMove,onUp};
+    document.getElementById('logoEditDone').addEventListener('click',exitLogoEditMode,{once:true});
+  }
+  function exitLogoEditMode(){
+    saveSettings(kioskSettings);
+    const editBar=document.getElementById('logoEditBar');
+    if(editBar)editBar.classList.add('hidden');
+    if(_logoEditListeners){
+      const{el,onDown,onMove,onUp}=_logoEditListeners;
+      el.removeEventListener('pointerdown',onDown);
+      el.removeEventListener('pointermove',onMove);
+      el.removeEventListener('pointerup',onUp);
+      el.removeEventListener('pointercancel',onUp);
+      el.classList.remove('logo-editable','logo-hidden-preview');
+      _logoEditListeners=null;
+    }
+    applyLogoPosition();
+  }
+  document.getElementById('arrangeLogoBtn')?.addEventListener('click',enterLogoEditMode);
   // Initial startup: prefer station config, then URL param, then setup screen
   (function startupInit(){
     const cfg=loadStationConfig();
@@ -231,6 +309,7 @@
   window.addEventListener('ratings-restored',()=>{ updateAdminStats(); });
   // Perform reconcile after listeners & potential init so UI can refresh immediately
   reconcileBackup();
+  applyLogoPosition();
   const kbdHint=document.getElementById('kbdHint');let hintShown=false;function showHint(){if(hintShown||!kbdHint)return;kbdHint.classList.remove('hidden');hintShown=true;}
   const topBar=document.querySelector('.top-bar');let hideTopTimer=null;function scheduleHide(){if(!topBar)return;clearTimeout(hideTopTimer);hideTopTimer=setTimeout(()=>{topBar.classList.add('autohide');},2600);}function showTopBar(){if(!topBar)return;const wasHidden=topBar.classList.contains('autohide');topBar.classList.remove('autohide');clearTimeout(hideTopTimer);hideTopTimer=setTimeout(()=>{topBar.classList.add('autohide');},wasHidden?3200:2600);}let inactivityTimer=null;const INACTIVITY_MS=3500;function resetInactivity(){if(!topBar)return;clearTimeout(inactivityTimer);inactivityTimer=setTimeout(()=>{if(window.__forceShowTopBar)return;topBar.classList.add('autohide');},INACTIVITY_MS);}function userActivity(e){if(e&&e.clientY!=null&&e.clientY<70){showTopBar();}else{if(e&&e.clientY!=null&&e.clientY<140){showTopBar();}}resetInactivity();}[ 'pointerdown','pointermove','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,userActivity,{passive:true}));window.addEventListener('orientationchange',()=>{setTimeout(()=>{resetInactivity();scheduleHide();},600);});window.addEventListener('resize',()=>{resetInactivity();});window.addEventListener('load',()=>{scheduleHide();resetInactivity();});document.addEventListener('pointerdown',e=>{if(e.clientY<90){showTopBar();}});document.addEventListener('mousemove',e=>{if(e.clientY<50){showTopBar();}});topBar?.addEventListener('pointerenter',()=>{clearTimeout(hideTopTimer);});topBar?.addEventListener('pointerleave',()=>{scheduleHide();});themeToggle.addEventListener('focus',showTopBar);fsToggle.addEventListener('focus',showTopBar);themeToggle.addEventListener('blur',scheduleHide);fsToggle.addEventListener('blur',scheduleHide);document.addEventListener('keydown',e=>{if(e.key==='Escape'){showTopBar();}});
   const netStatus=document.getElementById('netStatus');function updateOnline(){if(!netStatus)return;if(navigator.onLine){netStatus.style.display='none';}else{netStatus.style.display='block';}}window.addEventListener('online',updateOnline);window.addEventListener('offline',updateOnline);updateOnline();
