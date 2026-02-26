@@ -143,3 +143,9 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 .setup-btn { background:var(--accent); color:#222; font-size:1rem; font-weight:650; padding:.8rem 1.8rem; border:none; border-radius:999px; cursor:pointer; letter-spacing:.55px; box-shadow:0 5px 16px -6px rgba(0,0,0,.5); min-width:160px; }
 .setup-btn.setup-btn-sec { background:var(--panel-alt); color:var(--text); border:2px solid #2a3239; box-shadow:none; }
 .station-id-display { font-family:ui-monospace,monospace; font-size:.72rem; color:var(--muted); letter-spacing:.7px; margin-top:.15rem; }
+/* Multi-product rating */
+.rating-groups { display:flex; flex-direction:column; gap:1.25rem; width:100%; align-items:center; }
+.rating-group { display:flex; flex-direction:column; align-items:center; width:100%; }
+.rating-group-label { font-size:clamp(1rem,1.6vw,1.3rem); font-weight:700; color:var(--text); letter-spacing:.6px; margin-bottom:.35rem; text-align:center; }
+.multi-avg-block { display:flex; flex-direction:column; align-items:center; width:100%; padding:.5rem 0; }
+.multi-avg-label { font-size:clamp(.9rem,1.4vw,1.15rem); font-weight:700; color:var(--muted); letter-spacing:.55px; margin-bottom:.3rem; text-align:center; }
