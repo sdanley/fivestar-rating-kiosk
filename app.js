@@ -117,6 +117,7 @@
   const stationIdDisplay=document.getElementById('stationIdDisplay');
   const saveStationBtn=document.getElementById('saveStationBtn');
   const addTitleBtn=document.getElementById('addTitleBtn');
+  const setupLabelInput=document.getElementById('setupLabelInput');
   const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0; let pendingMap={};
   // ---- Station Config & FNV-1a Hash ----
   const STATION_CONFIG_KEY='station:config';
@@ -128,7 +129,7 @@
   function saveStationConfig(cfg){localStorage.setItem(STATION_CONFIG_KEY,JSON.stringify(cfg));}
   // ---- Kiosk Settings ----
   const SETTINGS_KEY='kiosk:settings';
-  const DEFAULT_SETTINGS={returnTimeoutSec:10,logoVisible:true,logoBottom:-8,logoRight:-5};
+  const DEFAULT_SETTINGS={returnTimeoutSec:10,logoVisible:true,logoBottom:-8,logoRight:-5,logoAngle:0};
   function loadSettings(){try{const raw=localStorage.getItem(SETTINGS_KEY);if(!raw)return Object.assign({},DEFAULT_SETTINGS);return Object.assign({},DEFAULT_SETTINGS,JSON.parse(raw));}catch{return Object.assign({},DEFAULT_SETTINGS);}}
   function saveSettings(s){localStorage.setItem(SETTINGS_KEY,JSON.stringify(s));}
   let kioskSettings=loadSettings();
@@ -142,11 +143,11 @@
   // ---- Setup Screen ----
   function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;inp.addEventListener('blur',()=>{if(!inp.value.trim()&&setupTitlesList&&setupTitlesList.querySelectorAll('.setup-title-input').length>1){inp.remove();updateStationIdPreview();}});if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
   function updateStationIdPreview(){if(!stationIdDisplay||!setupTitlesList)return;const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(titles.length){stationIdDisplay.textContent='Station ID: '+computeStationId(titles);}else{stationIdDisplay.textContent='';}}
-  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';}
+  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';if(setupLabelInput){const cfg=loadStationConfig();setupLabelInput.value=cfg?.label||'';}}
   function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');}
   addTitleBtn?.addEventListener('click',()=>{addSetupTitleInput('');updateStationIdPreview();});
   if(setupTitlesList){setupTitlesList.addEventListener('input',updateStationIdPreview);}
-  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const stationId=computeStationId(titles);saveStationConfig({titles,stationId});stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
+  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});if(yourLabel)yourLabel.textContent=label||'Rate the Feel of this Bed';stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
   function storageKey(id){return `rating:mattress:${id}`}
   function loadAgg(id){try{const raw=localStorage.getItem(storageKey(id));if(!raw)return{count:0,total:0,buckets:[0,0,0,0,0]};const p=JSON.parse(raw);if(!Array.isArray(p.buckets)||p.buckets.length!==5)p.buckets=[0,0,0,0,0];if(typeof p.count!== 'number'||typeof p.total!=='number')return{count:0,total:0,buckets:[0,0,0,0,0]};return p;}catch{return{count:0,total:0,buckets:[0,0,0,0,0]};}}
   function saveAgg(id,a){localStorage.setItem(storageKey(id),JSON.stringify(a))}
@@ -218,8 +219,10 @@
   function applyLogoPosition(){
     const el=document.querySelector('.footer-logo');
     if(!el)return;
+    el.style.position='';
     el.style.bottom=kioskSettings.logoBottom+'%';
     el.style.right=kioskSettings.logoRight+'%';
+    el.style.transform=`rotate(${kioskSettings.logoAngle||0}deg)`;
     if(!el.classList.contains('logo-editable')){
       el.style.display=kioskSettings.logoVisible===false?'none':'';
     }
@@ -232,30 +235,39 @@
     const panel=document.querySelector('.panel');
     const editBar=document.getElementById('logoEditBar');
     if(!logoEl||!panel||!editBar)return;
-    panel.classList.add('logo-editing');
+    // Capture current viewport coords before switching to fixed
+    const lr=logoEl.getBoundingClientRect();
+    const fixedBottom=window.innerHeight-lr.bottom;
+    const fixedRight=window.innerWidth-lr.right;
+    // Switch to fixed layer so logo floats above everything
+    logoEl.style.position='fixed';
+    logoEl.style.bottom=fixedBottom+'px';
+    logoEl.style.right=fixedRight+'px';
+    logoEl.style.transform=`rotate(${kioskSettings.logoAngle||0}deg)`;
     logoEl.style.display='';
     logoEl.classList.add('logo-editable');
     logoEl.classList.toggle('logo-hidden-preview',kioskSettings.logoVisible===false);
     editBar.classList.remove('hidden');
+    // Sync rotation slider
+    const rotateSlider=document.getElementById('logoEditRotate');
+    const rotateValEl=document.getElementById('logoEditRotateVal');
+    if(rotateSlider)rotateSlider.value=String(kioskSettings.logoAngle||0);
+    if(rotateValEl)rotateValEl.textContent=(kioskSettings.logoAngle||0)+'°';
     let startX,startY,startBottom,startRight,capturedId=null,hasMoved=false,isDown=false;
     function onDown(e){
       e.preventDefault();
       logoEl.setPointerCapture(e.pointerId);
-      capturedId=e.pointerId;
-      isDown=true;hasMoved=false;
+      capturedId=e.pointerId;isDown=true;hasMoved=false;
       startX=e.clientX;startY=e.clientY;
-      const pr=panel.getBoundingClientRect();
-      const lr=logoEl.getBoundingClientRect();
-      startBottom=((pr.bottom-lr.bottom)/pr.height)*100;
-      startRight=((pr.right-lr.right)/pr.width)*100;
+      startBottom=parseFloat(logoEl.style.bottom)||0;
+      startRight=parseFloat(logoEl.style.right)||0;
     }
     function onMove(e){
       if(!isDown)return;
       const dx=e.clientX-startX,dy=e.clientY-startY;
       if(Math.abs(dx)>6||Math.abs(dy)>6)hasMoved=true;
-      const pr=panel.getBoundingClientRect();
-      logoEl.style.bottom=(startBottom-(dy/pr.height)*100)+'%';
-      logoEl.style.right=(startRight-(dx/pr.width)*100)+'%';
+      logoEl.style.bottom=(startBottom-dy)+'px';
+      logoEl.style.right=(startRight-dx)+'px';
     }
     function onUp(){
       if(!isDown)return;
@@ -264,42 +276,52 @@
       if(!hasMoved){
         kioskSettings.logoVisible=!kioskSettings.logoVisible;
         logoEl.classList.toggle('logo-hidden-preview',!kioskSettings.logoVisible);
-      } else {
-        const pr=panel.getBoundingClientRect();
-        const lr=logoEl.getBoundingClientRect();
-        kioskSettings.logoBottom=((pr.bottom-lr.bottom)/pr.height)*100;
-        kioskSettings.logoRight=((pr.right-lr.right)/pr.width)*100;
       }
+    }
+    function onRotate(){
+      const angle=Number(rotateSlider.value);
+      kioskSettings.logoAngle=angle;
+      logoEl.style.transform=`rotate(${angle}deg)`;
+      if(rotateValEl)rotateValEl.textContent=angle+'°';
     }
     logoEl.addEventListener('pointerdown',onDown);
     logoEl.addEventListener('pointermove',onMove);
     logoEl.addEventListener('pointerup',onUp);
     logoEl.addEventListener('pointercancel',onUp);
-    _logoEditListeners={el:logoEl,onDown,onMove,onUp};
+    if(rotateSlider)rotateSlider.addEventListener('input',onRotate);
+    _logoEditListeners={el:logoEl,onDown,onMove,onUp,rotateSlider,onRotate};
     document.getElementById('logoEditDone').addEventListener('click',exitLogoEditMode,{once:true});
   }
   function exitLogoEditMode(){
-    saveSettings(kioskSettings);
-    document.querySelector('.panel')?.classList.remove('logo-editing');
     const editBar=document.getElementById('logoEditBar');
     if(editBar)editBar.classList.add('hidden');
     if(_logoEditListeners){
-      const{el,onDown,onMove,onUp}=_logoEditListeners;
+      const{el,onDown,onMove,onUp,rotateSlider,onRotate}=_logoEditListeners;
       el.removeEventListener('pointerdown',onDown);
       el.removeEventListener('pointermove',onMove);
       el.removeEventListener('pointerup',onUp);
       el.removeEventListener('pointercancel',onUp);
+      if(rotateSlider&&onRotate)rotateSlider.removeEventListener('input',onRotate);
+      // Convert fixed px coords back to panel-relative percentages
+      const panel=document.querySelector('.panel');
+      if(panel){
+        const pr=panel.getBoundingClientRect();
+        const lr=el.getBoundingClientRect();
+        kioskSettings.logoBottom=((pr.bottom-lr.bottom)/pr.height)*100;
+        kioskSettings.logoRight=((pr.right-lr.right)/pr.width)*100;
+      }
       el.classList.remove('logo-editable','logo-hidden-preview');
       _logoEditListeners=null;
     }
+    saveSettings(kioskSettings);
     applyLogoPosition();
   }
   document.getElementById('arrangeLogoBtn')?.addEventListener('click',enterLogoEditMode);
-  // Initial startup: prefer station config, then URL param, then setup screen
   (function startupInit(){
     const cfg=loadStationConfig();
     if(cfg&&Array.isArray(cfg.titles)&&cfg.titles.length){
       stationTitles=cfg.titles;currentTitleIndex=0;
+      if(cfg.label&&yourLabel)yourLabel.textContent=cfg.label;
       idInputWrapper.classList.add('hidden');
       initId(stationTitles[0]);
       return;
