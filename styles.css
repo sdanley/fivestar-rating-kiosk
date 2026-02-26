@@ -153,9 +153,15 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 /* Results view */
 .results-actions { display:flex; flex-direction:column; align-items:center; gap:.9rem; margin:.4rem 0 .8rem; }
 .results-encourage { margin:0; text-align:center; font-size:clamp(1rem,1.45vw,1.25rem); color:var(--muted); letter-spacing:.5px; font-style:italic; }
-.rate-another-btn { background:var(--panel-alt); color:var(--text); font-size:clamp(.95rem,1.4vw,1.2rem); font-weight:650; padding:.8rem 2.2rem; border:2px solid #2a3239; border-radius:999px; cursor:pointer; letter-spacing:.6px; transition:background .2s,border-color .2s; }
-.rate-another-btn:active { background:var(--bg); }
-.auto-return-msg { font-size:.72rem; color:var(--muted); letter-spacing:.45px; text-align:center; }
+/* Circle timer dismiss button */
+.circle-timer-btn { position:relative; width:88px; height:88px; background:transparent; border:none; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+.circle-timer-btn:active { transform:scale(.93); }
+.circle-timer-svg { position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
+.circle-timer-track { fill:none; stroke:rgba(255,255,255,.12); stroke-width:7; }
+html.theme-light .circle-timer-track { stroke:rgba(0,0,0,.10); }
+/* stroke-dasharray = 2*π*42 (r=42) ≈ 263.9 — must match CIRCLE_TIMER_RADIUS in app.js */
+.circle-timer-arc { fill:none; stroke:var(--accent); stroke-width:7; stroke-linecap:round; stroke-dasharray:263.9; stroke-dashoffset:0; }
+.circle-timer-icon { font-size:2rem; color:var(--text); position:relative; z-index:1; line-height:1; user-select:none; font-weight:300; }
 /* Station setup */
 .station-setup { display:flex; flex-direction:column; align-items:center; gap:.75rem; max-width:520px; margin:1rem auto 0; text-align:center; }
 .setup-instructions { margin:0; font-size:clamp(.95rem,1.35vw,1.15rem); color:var(--muted); letter-spacing:.4px; }
@@ -164,10 +170,13 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 .setup-title-input:focus { outline:none; box-shadow:var(--focus); border-color:var(--accent); }
 textarea.setup-title-input { resize:none; line-height:1.45; min-height:5.2rem; font-family:inherit; }
 /* Subtle label ghost display (setup screen) */
-.setup-label-display { width:100%; padding:.65rem 1.1rem; border:2px dashed rgba(255,204,51,.28); border-radius:22px; cursor:pointer; color:var(--muted); font-size:1.05rem; font-weight:600; letter-spacing:.45px; display:flex; align-items:center; justify-content:center; gap:.3rem; background:transparent; transition:border-color .25s,color .2s,background .2s; -webkit-user-select:none; user-select:none; }
-html.theme-light .setup-label-display { border-color:rgba(209,143,0,.35); }
-.setup-label-display:hover, .setup-label-display:focus-visible { border-color:var(--accent); color:var(--text); background:rgba(255,204,51,.05); outline:none; box-shadow:var(--focus); }
+.setup-label-display { width:100%; padding:.65rem 1.1rem; border:2px dashed rgba(255,204,51,.28); border-radius:22px; cursor:pointer; color:var(--text); font-size:clamp(1.5rem,3.5vw,2.5rem); font-weight:800; letter-spacing:.55px; display:flex; align-items:center; justify-content:center; gap:.3rem; background:transparent; transition:border-color .25s,color .2s,background .2s; -webkit-user-select:none; user-select:none; line-height:1.15; text-align:center; }
+html.theme-light .setup-label-display { border-color:rgba(209,143,0,.35); color:var(--text); }
+.setup-label-display:hover, .setup-label-display:focus-visible { border-color:var(--accent); background:rgba(255,204,51,.05); outline:none; box-shadow:var(--focus); }
 .setup-label-edit-icon { font-size:.75rem; opacity:.45; flex-shrink:0; }
+/* Setup label textarea styled to match the heading display above */
+.setup-label-input { background:var(--panel-alt); border:2px solid var(--accent); color:var(--text); padding:.65rem 1.1rem; font-size:clamp(1.5rem,3.5vw,2.5rem); font-weight:800; border-radius:22px; text-align:center; letter-spacing:.55px; -webkit-user-select:text; user-select:text; width:100%; resize:none; line-height:1.15; font-family:inherit; min-height:4rem; }
+.setup-label-input:focus { outline:none; box-shadow:var(--focus); }
 @keyframes setup-label-wiggle { 0%,100%{transform:translateX(0) rotate(0deg)} 20%{transform:translateX(-4px) rotate(-.8deg)} 40%{transform:translateX(4px) rotate(.8deg)} 62%{transform:translateX(-2px) rotate(-.4deg)} 80%{transform:translateX(2px) rotate(.4deg)} }
 .setup-label-display.wiggle { animation:setup-label-wiggle .55s ease; }
 /* Logo variant override classes */
