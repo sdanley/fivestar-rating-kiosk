@@ -109,7 +109,6 @@
   const submitWrapper=document.getElementById('submitWrapper');
   const submitBtn=document.getElementById('submitBtn');
   const resultsActions=document.getElementById('resultsActions');
-  const autoCountdown=document.getElementById('autoCountdown');
   const rateAnotherBtn=document.getElementById('rateAnotherBtn');
   const ratingGroupsContainer=document.getElementById('ratingGroupsContainer');
   const stationSetupWrapper=document.getElementById('stationSetupWrapper');
@@ -138,7 +137,20 @@
   let kioskSettings=loadSettings();
   let autoReturnInterval=null;
   function clearAutoReturn(){if(autoReturnInterval){clearInterval(autoReturnInterval);autoReturnInterval=null;}}
-  function startAutoReturn(){clearAutoReturn();let remaining=kioskSettings.returnTimeoutSec;if(autoCountdown)autoCountdown.textContent=remaining;autoReturnInterval=setInterval(()=>{remaining--;if(autoCountdown)autoCountdown.textContent=remaining;if(remaining<=0){clearAutoReturn();goRateAnother();}},1000);}
+  function startAutoReturn(){
+    clearAutoReturn();
+    const totalSec=kioskSettings.returnTimeoutSec;
+    const arc=document.getElementById('circleTimerArc');
+    const CIRCLE_TIMER_RADIUS=42; // must match r="42" in index.html SVG circle
+    const circ=2*Math.PI*CIRCLE_TIMER_RADIUS;
+    if(arc){arc.style.strokeDasharray=String(circ);arc.style.strokeDashoffset='0';}
+    let remaining=totalSec;
+    autoReturnInterval=setInterval(()=>{
+      remaining--;
+      if(arc){const progress=(totalSec-remaining)/totalSec;arc.style.strokeDashoffset=String(circ*progress);}
+      if(remaining<=0){clearAutoReturn();goRateAnother();}
+    },1000);
+  }
   function goRateAnother(){clearAutoReturn();selected=0;pending=0;pendingMap={};buildStars();showRatingPhase();}
   function showRatingPhase(){if(stationTitles.length>1){heading.textContent=DEFAULT_RATING_LABEL;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');pendingMap={};buildMultiRating();}else{heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}}
   function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
@@ -272,36 +284,40 @@
     // Capture current viewport coords before switching to fixed
     const lr=logoEl.getBoundingClientRect();
     const fixedBottom=window.innerHeight-lr.bottom;
-    const fixedRight=window.innerWidth-lr.right;
+    const fixedLeft=lr.left;
     // Switch to fixed layer so logo floats above everything
     logoEl.style.position='fixed';
     logoEl.style.bottom=fixedBottom+'px';
-    logoEl.style.right=fixedRight+'px';
+    logoEl.style.left=fixedLeft+'px';
+    logoEl.style.right='auto';
     logoEl.style.transform=`rotate(${kioskSettings.logoAngle||0}deg)`;
     logoEl.style.display='';
     logoEl.classList.add('logo-editable');
     logoEl.classList.toggle('logo-hidden-preview',kioskSettings.logoVisible===false);
+    panel.classList.add('logo-editing');
     editBar.classList.remove('hidden');
     // Sync rotation slider
     const rotateSlider=document.getElementById('logoEditRotate');
     const rotateValEl=document.getElementById('logoEditRotateVal');
     if(rotateSlider)rotateSlider.value=String(kioskSettings.logoAngle||0);
     if(rotateValEl)rotateValEl.textContent=(kioskSettings.logoAngle||0)+'°';
-    let startX,startY,startBottom,startRight,capturedId=null,hasMoved=false,isDown=false;
+    let startX,startY,startBottom,startLeft,capturedId=null,hasMoved=false,isDown=false;
     function onDown(e){
       e.preventDefault();
+      e.stopPropagation();
       logoEl.setPointerCapture(e.pointerId);
       capturedId=e.pointerId;isDown=true;hasMoved=false;
       startX=e.clientX;startY=e.clientY;
       startBottom=parseFloat(logoEl.style.bottom)||0;
-      startRight=parseFloat(logoEl.style.right)||0;
+      startLeft=parseFloat(logoEl.style.left)||0;
     }
     function onMove(e){
       if(!isDown)return;
+      e.stopPropagation();
       const dx=e.clientX-startX,dy=e.clientY-startY;
       if(Math.abs(dx)>6||Math.abs(dy)>6)hasMoved=true;
       logoEl.style.bottom=(startBottom-dy)+'px';
-      logoEl.style.right=(startRight-dx)+'px';
+      logoEl.style.left=(startLeft+dx)+'px';
     }
     function onUp(){
       if(!isDown)return;
@@ -330,14 +346,14 @@
     function onVariantToggle(){const _cycle={auto:'dark',dark:'light',light:'auto'};kioskSettings.logoVariant=_cycle[kioskSettings.logoVariant||'auto']||'auto';logoEl.classList.remove('logo-force-dark','logo-force-light');if(kioskSettings.logoVariant==='dark')logoEl.classList.add('logo-force-dark');else if(kioskSettings.logoVariant==='light')logoEl.classList.add('logo-force-light');_syncVariantBtn();}
     if(variantBtn)variantBtn.addEventListener('click',onVariantToggle);
     _syncVariantBtn();
-    _logoEditListeners={el:logoEl,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle};
+    _logoEditListeners={el:logoEl,panel,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle};
     document.getElementById('logoEditDone').addEventListener('click',exitLogoEditMode,{once:true});
   }
   function exitLogoEditMode(){
     const editBar=document.getElementById('logoEditBar');
     if(editBar)editBar.classList.add('hidden');
     if(_logoEditListeners){
-      const{el,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle}=_logoEditListeners;
+      const{el,panel,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle}=_logoEditListeners;
       el.removeEventListener('pointerdown',onDown);
       el.removeEventListener('pointermove',onMove);
       el.removeEventListener('pointerup',onUp);
@@ -345,14 +361,17 @@
       if(rotateSlider&&onRotate)rotateSlider.removeEventListener('input',onRotate);
       if(variantBtn&&onVariantToggle)variantBtn.removeEventListener('click',onVariantToggle);
       // Convert fixed px coords back to panel-relative percentages
-      const panel=document.querySelector('.panel');
-      if(panel){
-        const pr=panel.getBoundingClientRect();
+      const panelEl=panel||document.querySelector('.panel');
+      if(panelEl){
+        const pr=panelEl.getBoundingClientRect();
         const lr=el.getBoundingClientRect();
         kioskSettings.logoBottom=((pr.bottom-lr.bottom)/pr.height)*100;
         kioskSettings.logoRight=((pr.right-lr.right)/pr.width)*100;
       }
+      el.style.left='';
+      el.style.right='';
       el.classList.remove('logo-editable','logo-hidden-preview');
+      if(panel)panel.classList.remove('logo-editing');
       _logoEditListeners=null;
     }
     saveSettings(kioskSettings);

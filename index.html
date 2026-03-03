@@ -122,19 +122,24 @@
       </div>
       <div id="resultsActions" class="results-actions hidden">
         <p class="results-encourage">See how others feel about this product!</p>
-        <button id="rateAnotherBtn" type="button" class="rate-another-btn">Rate Another</button>
-        <div class="auto-return-msg">Returning in <span id="autoCountdown">10</span>s&hellip;</div>
+        <button id="rateAnotherBtn" type="button" class="circle-timer-btn" aria-label="Dismiss and rate another product">
+          <svg viewBox="0 0 100 100" class="circle-timer-svg" aria-hidden="true">
+            <circle class="circle-timer-track" cx="50" cy="50" r="42"/>
+            <circle id="circleTimerArc" class="circle-timer-arc" cx="50" cy="50" r="42"/>
+          </svg>
+          <span class="circle-timer-icon" aria-hidden="true">&#x2715;</span>
+        </button>
       </div>
       <p id="subtitle" class="rating-text">Enter a name to begin</p>
 
       <div id="stationSetupWrapper" class="station-setup hidden">
-        <p class="setup-instructions">Configure this kiosk station<br>Enter the product name(s) to rate:</p>
-        <div id="setupTitlesList" class="setup-titles-list"></div>
-        <button id="addTitleBtn" type="button" class="setup-btn setup-btn-sec">&#43; Add Product</button>
         <div id="setupLabelDisplay" class="setup-label-display" role="button" tabindex="0" aria-label="Edit the rating prompt text">
           <span id="setupLabelText" class="setup-label-text">Rate the Feel of this Bed</span><span class="setup-label-edit-icon" aria-hidden="true"> ✎</span>
         </div>
-        <textarea id="setupLabelInput" class="setup-title-input setup-label-input hidden" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+        <textarea id="setupLabelInput" class="setup-label-input hidden" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+        <p class="setup-instructions">Configure this kiosk station<br>Enter the product name(s) to rate:</p>
+        <div id="setupTitlesList" class="setup-titles-list"></div>
+        <button id="addTitleBtn" type="button" class="setup-btn setup-btn-sec">&#43; Add Product</button>
         <button id="saveStationBtn" type="button" class="setup-btn">Save &amp; Start</button>
         <button id="setupArrangeLogoBtn" type="button" class="setup-btn setup-btn-sec">Arrange Logo</button>
         <div id="stationIdDisplay" class="station-id-display"></div>
