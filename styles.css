@@ -105,7 +105,7 @@ html.theme-light .logo-edit-bar-sep { background:rgba(0,0,0,.12); }
 .logo-edit-rotate-val { font-size:.7rem; color:var(--text); min-width:2.4rem; text-align:right; font-family:ui-monospace,monospace; }
 .logo-edit-bar button { background:var(--accent); color:#002855; border:none; border-radius:999px; padding:.35rem .85rem; font-size:.75rem; font-weight:700; cursor:pointer; letter-spacing:.3px }
 .visually-hidden { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0 0 0 0) !important; white-space:nowrap !important; border:0 !important; }
-@media (max-width:780px){ h1#headingMain { font-size:clamp(2.7rem,9vw,3.6rem); } .avg-stars { gap:.65rem } .panel { padding:1.05rem 1rem 2.6rem } }
+@media (max-width:780px){ h1#headingMain { font-size:clamp(2.7rem,9vw,3.6rem); } .rating-group-label { font-size:clamp(2rem,8vw,3.2rem); } .avg-stars { gap:.65rem } .panel { padding:1.05rem 1rem 2.6rem } }
 html.ios-tablet .wrap, html.full-bleed .wrap { max-width:100%; }
 .kbd-hint { margin-top:.65rem; text-align:center; font-size:.7rem; letter-spacing:.4px; color:var(--muted) }
 .status { min-height:1.1rem; text-align:center; font-size:.8rem; margin-top:.55rem; font-weight:600; letter-spacing:.45px; color:var(--muted); transition:color .3s }
@@ -193,7 +193,7 @@ html.theme-light .setup-label-display { border-color:rgba(209,143,0,.35); color:
 /* Multi-product rating */
 .rating-groups { display:flex; flex-direction:column; gap:1.25rem; width:100%; align-items:center; }
 .rating-group { display:flex; flex-direction:column; align-items:center; width:100%; }
-.rating-group-label { font-size:clamp(1rem,1.6vw,1.3rem); font-weight:700; color:var(--text); letter-spacing:.6px; margin-bottom:.35rem; text-align:center; }
+.rating-group-label { font-size:clamp(2.2rem,5vw,3.8rem); font-weight:800; color:var(--text); letter-spacing:.75px; margin-bottom:.35rem; text-align:center; line-height:1.05; overflow-wrap:break-word; max-width:100%; }
 .multi-avg-block { display:flex; flex-direction:column; align-items:center; width:100%; padding:.5rem 0; }
 .multi-avg-label { font-size:clamp(.9rem,1.4vw,1.15rem); font-weight:700; color:var(--muted); letter-spacing:.55px; margin-bottom:.3rem; text-align:center; }
 /* Admin stats tabs */
