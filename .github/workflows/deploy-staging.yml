@@ -1,0 +1,51 @@
+# Deploy staging environment to GitHub Pages /staging/ path
+name: Deploy Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Needed to push to gh-pages
+
+concurrency:
+  group: "staging-deploy"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout staging
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages-branch
+
+      - name: Clear staging directory
+        run: |
+          mkdir -p gh-pages-branch/staging
+          rm -rf gh-pages-branch/staging/*
+
+      - name: Copy staging files
+        run: |
+          # Copy all files except .git, gh-pages-branch, and documentation
+          rsync -av --exclude='.git' --exclude='gh-pages-branch' \
+            --exclude='.github' --exclude='docs/REGRESSION_AUDIT.md' \
+            --exclude='docs/STAGING_DEPLOYMENT_PLAN.md' \
+            ./ gh-pages-branch/staging/
+
+      - name: Commit and push to gh-pages
+        working-directory: gh-pages-branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add staging/
+          git commit -m "Deploy staging from ${{ github.sha }}" || echo "No changes to commit"
+          git push origin gh-pages

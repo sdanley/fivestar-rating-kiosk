@@ -15,6 +15,32 @@
   color-scheme: dark;
   --outline: #8acc9f;    /* ISPA Green — empty star outlines */
 }
+
+/* Environment badge (staging/preview deployments) */
+.env-badge {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 9999;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-radius: 0.25rem;
+  pointer-events: none;
+  opacity: 0.9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.env-badge.staging {
+  background: #ff9800;
+  color: #000;
+}
+.env-badge.preview {
+  background: #2196f3;
+  color: #fff;
+}
+
 /* Prevent iOS dynamic text auto-zoom on orientation changes */
 html { -webkit-text-size-adjust:100%; }
 .theme-light {
