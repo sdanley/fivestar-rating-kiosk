@@ -1,5 +1,24 @@
 // Consolidated kiosk application script
 (function(){
+  // Detect environment from URL path and show badge if not production
+  (function detectEnvironment() {
+    const path = window.location.pathname;
+    const badge = document.getElementById('envBadge');
+    if (!badge) return;
+
+    if (path.includes('/staging/')) {
+      badge.textContent = 'STAGING';
+      badge.classList.add('staging');
+      badge.classList.remove('hidden');
+    } else if (path.match(/\/pr-\d+\//)) {
+      const prNum = path.match(/\/pr-(\d+)\//)[1];
+      badge.textContent = 'PREVIEW: PR #' + prNum;
+      badge.classList.add('preview');
+      badge.classList.remove('hidden');
+    }
+    // Production: badge stays hidden
+  })();
+
   const docEl=document.documentElement;
   const ua=navigator.userAgent;
   // Include iPadOS (desktop-class Safari identifies as Macintosh with touch points)
