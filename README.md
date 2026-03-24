@@ -81,6 +81,15 @@ This app is configured to work on GitHub Pages:
 2. Enable GitHub Pages in repository settings (use `main` branch)
 3. Access at `https://yourusername.github.io/fivestar-rating-kiosk/`
 
+### Staging and Release Flow
+
+Use a staging-first flow to reduce regressions:
+
+1. Create feature branches from `staging`
+2. Open PRs into `staging` and validate at `/staging/`
+3. Promote `staging` to `main` only after validation
+4. Use `docs/RELEASE_CHECKLIST.md` for production promotions
+
 ### PWA Installation
 
 #### On iOS (iPad/iPhone):
@@ -253,8 +262,9 @@ fivestar-rating-kiosk/
 1. Update `version.json` with new semantic version (e.g., "1.0.20")
 2. Update `VERSION` constant in `sw.js` for cache invalidation (e.g., 'v14')
    - Note: These version numbers serve different purposes and don't need to match
-3. Deploy changes
-4. Users can check for updates in admin panel
+3. Keep both updates in the same PR as user-facing changes (do not split into a follow-up PR)
+4. Deploy changes
+5. Users can check for updates in admin panel
 
 ### Customization:
 - **Colors**: Edit CSS custom properties in `styles.css`
@@ -326,7 +336,7 @@ fivestar-rating-kiosk/
 This is a self-contained application with no build process. To contribute:
 1. Make changes to source files
 2. Test in multiple browsers and devices
-3. Update version numbers if needed
+3. For user-facing changes, update both `version.json` and `sw.js` `VERSION`
 4. Submit pull request with description
 
 ## License

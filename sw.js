@@ -1,7 +1,13 @@
 // Service Worker: offline + kiosk enhancements
 // Increment version to invalidate old caches when app changes
 const VERSION = 'v14';
-const CACHE_NAME = `rating-app-${VERSION}`;
+const SCOPE_PATH = self.registration && self.registration.scope
+  ? new URL(self.registration.scope).pathname
+  : '/';
+const ENV_SEGMENT = /\/staging\/$/.test(SCOPE_PATH)
+  ? 'staging'
+  : (/\/pr-\d+\/$/.test(SCOPE_PATH) ? 'preview' : 'production');
+const CACHE_NAME = `rating-app-${ENV_SEGMENT}-${VERSION}`;
 // Core assets for shell (add png icons for iOS install splash support)
 // Use relative paths so it works when hosted under a subpath (e.g., GitHub Pages /repo-name/)
 const CORE_ASSETS = [

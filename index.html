@@ -28,12 +28,12 @@
       if (!location.hostname.endsWith('.github.io')) return; // Not GitHub Pages
 
       // Detect intended environment from current path
-      var isStaging = path.includes('/staging/');
-      var isPR = path.match(/\/pr-\d+\//);
+      var isStaging = /\/staging(?:\/|$)/.test(path);
+      var prMatch = path.match(/\/pr-(\d+)(?:\/|$)/);
 
       var expectedBase = '/' + repo + '/';
       if (isStaging) expectedBase += 'staging/';
-      else if (isPR) expectedBase += isPR[0].slice(1); // e.g., "pr-123/"
+      else if (prMatch) expectedBase += 'pr-' + prMatch[1] + '/';
 
       // If not at expected base, redirect
       if (!path.startsWith(expectedBase)) {

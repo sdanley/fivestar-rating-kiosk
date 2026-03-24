@@ -6,12 +6,14 @@
     const badge = document.getElementById('envBadge');
     if (!badge) return;
 
-    if (path.includes('/staging/')) {
+    if (/\/staging(?:\/|$)/.test(path)) {
       badge.textContent = 'STAGING';
       badge.classList.add('staging');
       badge.classList.remove('hidden');
-    } else if (path.match(/\/pr-\d+\//)) {
-      const prNum = path.match(/\/pr-(\d+)\//)[1];
+    } else {
+      const prMatch = path.match(/\/pr-(\d+)(?:\/|$)/);
+      if (!prMatch) return;
+      const prNum = prMatch[1];
       badge.textContent = 'PREVIEW: PR #' + prNum;
       badge.classList.add('preview');
       badge.classList.remove('hidden');
