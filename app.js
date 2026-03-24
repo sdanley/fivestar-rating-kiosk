@@ -131,6 +131,7 @@
   const submitBtn=document.getElementById('submitBtn');
   const resultsActions=document.getElementById('resultsActions');
   const rateAnotherBtn=document.getElementById('rateAnotherBtn');
+  const autoCountdown=document.getElementById('autoCountdown');
   const ratingGroupsContainer=document.getElementById('ratingGroupsContainer');
   const stationSetupWrapper=document.getElementById('stationSetupWrapper');
   const setupTitlesList=document.getElementById('setupTitlesList');
@@ -140,7 +141,8 @@
   const setupLabelInput=document.getElementById('setupLabelInput');
   const setupLabelDisplay=document.getElementById('setupLabelDisplay');
   const setupLabelText=document.getElementById('setupLabelText');
-  const DEFAULT_RATING_LABEL='Rate the Feel of this Bed';
+  const DEFAULT_RATING_LABEL='Product Rating';
+  let ratingPromptText=DEFAULT_RATING_LABEL;
   const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0; let pendingMap={};
   // ---- Station Config & FNV-1a Hash ----
   const STATION_CONFIG_KEY='station:config';
@@ -166,14 +168,18 @@
     const circ=2*Math.PI*CIRCLE_TIMER_RADIUS;
     if(arc){arc.style.strokeDasharray=String(circ);arc.style.strokeDashoffset='0';}
     let remaining=totalSec;
+    if(autoCountdown)autoCountdown.textContent=String(remaining);
     autoReturnInterval=setInterval(()=>{
       remaining--;
+      if(autoCountdown)autoCountdown.textContent=String(Math.max(remaining,0));
       if(arc){const progress=(totalSec-remaining)/totalSec;arc.style.strokeDashoffset=String(circ*progress);}
       if(remaining<=0){clearAutoReturn();goRateAnother();}
     },1000);
   }
-  function goRateAnother(){clearAutoReturn();selected=0;pending=0;pendingMap={};buildStars();showRatingPhase();}
-  function showRatingPhase(){if(stationTitles.length>1){heading.textContent='Product Rating';if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');pendingMap={};buildMultiRating();}else{heading.textContent=currentId;if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.remove('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}}
+  function resolveRatingPromptLabel(){return (ratingPromptText||'').trim()||DEFAULT_RATING_LABEL;}
+  function setRatingPromptLabel(value){ratingPromptText=(value||'').trim()||DEFAULT_RATING_LABEL;}
+  function goRateAnother(){clearAutoReturn();if(autoCountdown)autoCountdown.textContent=String(kioskSettings.returnTimeoutSec);selected=0;pending=0;pendingMap={};buildStars();showRatingPhase();}
+  function showRatingPhase(){heading.classList.remove('hidden');heading.textContent=resolveRatingPromptLabel();if(stationTitles.length>1){if(subtitle)subtitle.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.remove('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');pendingMap={};buildMultiRating();}else{if(subtitle)subtitle.classList.add('hidden');if(yourLabel){yourLabel.textContent=currentId;yourLabel.classList.remove('hidden');}if(averageBlock)averageBlock.classList.add('hidden');if(starsContainer)starsContainer.classList.remove('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.add('rating-active');selected=0;pending=0;paintStars();}}
   function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);const ratingCount=agg.count?`with ${agg.count} Rating${agg.count===1?'':'s'}`:'be the first to rate';if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars <small>${ratingCount}</small>`;renderFractional(v);if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
   function selectPending(val){pending=val;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');showHint();}
   // ---- Setup Screen ----
@@ -211,7 +217,7 @@
   setupLabelInput?.addEventListener('blur',()=>setTimeout(_showLabelDisplay,120));
   addTitleBtn?.addEventListener('click',()=>{addSetupTitleInput('');updateStationIdPreview();});
   if(setupTitlesList){setupTitlesList.addEventListener('input',updateStationIdPreview);}
-  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});if(yourLabel)yourLabel.textContent=label||DEFAULT_RATING_LABEL;stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
+  saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});setRatingPromptLabel(label);stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
   function storageKey(id){return `rating:mattress:${id}`}
   function loadAgg(id){try{const raw=localStorage.getItem(storageKey(id));if(!raw)return{count:0,total:0,buckets:[0,0,0,0,0]};const p=JSON.parse(raw);if(!Array.isArray(p.buckets)||p.buckets.length!==5)p.buckets=[0,0,0,0,0];if(typeof p.count!== 'number'||typeof p.total!=='number')return{count:0,total:0,buckets:[0,0,0,0,0]};return p;}catch{return{count:0,total:0,buckets:[0,0,0,0,0]};}}
   function saveAgg(id,a){localStorage.setItem(storageKey(id),JSON.stringify(a))}
@@ -404,7 +410,7 @@
     const cfg=loadStationConfig();
     if(cfg&&Array.isArray(cfg.titles)&&cfg.titles.length){
       stationTitles=cfg.titles;currentTitleIndex=0;
-      if(cfg.label&&yourLabel)yourLabel.textContent=cfg.label;
+      setRatingPromptLabel(cfg.label||'');
       idInputWrapper.classList.add('hidden');
       initId(stationTitles[0]);
       return;

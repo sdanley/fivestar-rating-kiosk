@@ -64,7 +64,7 @@ input, button, textarea { touch-action:manipulation; }
 html,body { height:-webkit-fill-available; }
 @supports (-webkit-touch-callout:none){ body{ min-height:-webkit-fill-available; } }
 html { overscroll-behavior:none }
-h1#headingMain { margin:.25rem 0 .55rem; font-weight:800; line-height:1.03; font-size:clamp(3rem,6vw,4.6rem); text-align:center; letter-spacing:.85px }
+h1#headingMain { margin:.25rem 0 .7rem; font-weight:800; line-height:1.03; font-size:clamp(2.1rem,4.2vw,3.1rem); text-align:center; letter-spacing:.85px; color:var(--muted); text-shadow:none }
 .rating-text { margin:.25rem 0 0; text-align:center; font-size:clamp(1.05rem,1.4vw,1.3rem); font-weight:600; letter-spacing:.6px }
 .wrap { width:100%; max-width:1180px; display:flex; flex-direction:column; gap:1.15rem; flex:1; min-height:100%; }
 .panel { background:var(--panel); border:1px solid #22292f; padding:1.05rem clamp(.9rem,3vw,3.2rem) 2.9rem; border-radius:var(--radius); box-shadow:0 12px 40px -12px rgba(0,0,0,.65),0 2px 6px rgba(0,0,0,.4); position:relative; overflow:hidden; transition:background .4s,border-color .4s,color .4s; flex:1; display:flex; flex-direction:column; isolation:isolate; }
@@ -81,7 +81,7 @@ html.theme-light .panel { background:#ffffff; border-color:#d8dde1; box-shadow:0
 .fraction-wrap svg { width:100%; height:100%; display:block }
 .avg-line { font-size:clamp(2.3rem,4.5vw,3.8rem); font-weight:700; letter-spacing:.6px; text-shadow:0 2px 10px rgba(0,0,0,.4); line-height:1.05; margin:.45rem 0 0; text-align:center }
 .avg-line small { display:block; font-size:clamp(.7rem,.95vw,.9rem); font-weight:500; color:var(--muted); margin-top:.55rem; letter-spacing:.55px }
-.section-label { margin:0 0 .5rem; text-align:center; font-size:clamp(1.1rem,1.7vw,1.45rem); font-weight:650; color:var(--muted); letter-spacing:.65px }
+.section-label { margin:.55rem 0 1rem; text-align:center; font-size:clamp(2.2rem,5vw,3.8rem); font-weight:800; color:var(--text); letter-spacing:.6px; line-height:1.05; overflow-wrap:break-word; max-width:100%; text-shadow:0 1px 6px rgba(0,0,0,.14) }
 .stars { display:flex; justify-content:center; align-items:center; gap:20px; -webkit-user-select:none; user-select:none; touch-action:manipulation; margin:.25rem 0 .1rem; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; transform:translateY(-4px) }
 .stars::-webkit-scrollbar { display:none }
 .star-btn { -webkit-tap-highlight-color:transparent; appearance:none; border:none; background:transparent; padding:6px; cursor:pointer; line-height:0; border-radius:20px; position:relative; transition:transform .12s,background .25s }
@@ -131,7 +131,7 @@ html.theme-light .logo-edit-bar-sep { background:rgba(0,0,0,.12); }
 .logo-edit-rotate-val { font-size:.7rem; color:var(--text); min-width:2.4rem; text-align:right; font-family:ui-monospace,monospace; }
 .logo-edit-bar button { background:var(--accent); color:#002855; border:none; border-radius:999px; padding:.35rem .85rem; font-size:.75rem; font-weight:700; cursor:pointer; letter-spacing:.3px }
 .visually-hidden { position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0 0 0 0) !important; white-space:nowrap !important; border:0 !important; }
-@media (max-width:780px){ h1#headingMain { font-size:clamp(2.7rem,9vw,3.6rem); } .avg-stars { gap:.65rem } .panel { padding:1.05rem 1rem 2.6rem } }
+@media (max-width:780px){ h1#headingMain { font-size:clamp(1.85rem,7vw,2.5rem); } .avg-stars { gap:.65rem } .panel { padding:1.05rem 1rem 2.6rem } .rating-group-label { font-size:clamp(2rem,8vw,3.2rem); } .section-label { font-size:clamp(2rem,8vw,3.2rem); } }
 html.ios-tablet .wrap, html.full-bleed .wrap { max-width:100%; }
 .kbd-hint { margin-top:.65rem; text-align:center; font-size:.7rem; letter-spacing:.4px; color:var(--muted) }
 .status { min-height:1.1rem; text-align:center; font-size:.8rem; margin-top:.55rem; font-weight:600; letter-spacing:.45px; color:var(--muted); transition:color .3s }
@@ -179,6 +179,7 @@ html.theme-light .admin-box { border-color:#d8dde1; background:#fff }
 /* Results view */
 .results-actions { display:flex; flex-direction:column; align-items:center; gap:.9rem; margin:.4rem 0 .8rem; }
 .results-encourage { margin:0; text-align:center; font-size:clamp(1rem,1.45vw,1.25rem); color:var(--muted); letter-spacing:.5px; font-style:italic; }
+.results-countdown { margin:0; text-align:center; font-size:clamp(.95rem,1.35vw,1.15rem); color:var(--muted); letter-spacing:.45px; }
 /* Circle timer dismiss button */
 .circle-timer-btn { position:relative; width:88px; height:88px; background:transparent; border:none; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
 .circle-timer-btn:active { transform:scale(.93); }
@@ -217,9 +218,9 @@ html.theme-light .setup-label-display { border-color:rgba(209,143,0,.35); color:
 .setup-btn.setup-btn-sec { background:var(--panel-alt); color:var(--text); border:2px solid #2a3239; box-shadow:none; }
 .station-id-display { font-family:ui-monospace,monospace; font-size:.72rem; color:var(--muted); letter-spacing:.7px; margin-top:.15rem; }
 /* Multi-product rating */
-.rating-groups { display:flex; flex-direction:column; gap:1.25rem; width:100%; align-items:center; }
+.rating-groups { display:flex; flex-direction:column; gap:1.45rem; width:100%; align-items:center; margin-top:.65rem; }
 .rating-group { display:flex; flex-direction:column; align-items:center; width:100%; }
-.rating-group-label { font-size:clamp(1rem,1.6vw,1.3rem); font-weight:700; color:var(--text); letter-spacing:.6px; margin-bottom:.35rem; text-align:center; }
+.rating-group-label { font-size:clamp(2.2rem,5vw,3.8rem); font-weight:800; color:var(--text); letter-spacing:.6px; margin-bottom:.65rem; text-align:center; line-height:1.05; overflow-wrap:break-word; max-width:100%; text-shadow:0 1px 6px rgba(0,0,0,.14); }
 .multi-avg-block { display:flex; flex-direction:column; align-items:center; width:100%; padding:.5rem 0; }
 .multi-avg-label { font-size:clamp(.9rem,1.4vw,1.15rem); font-weight:700; color:var(--muted); letter-spacing:.55px; margin-bottom:.3rem; text-align:center; }
 /* Admin stats tabs */
