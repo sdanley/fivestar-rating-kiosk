@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+
+<head>
+  <meta charset="UTF-8" />
+  <!-- Base viewport (JS below enforces no-zoom for kiosk without violating lint rules) -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Five Star Rating Kiosk</title>
+  <link rel="manifest" href="manifest.webmanifest?v=3" />
+  <link rel="icon" href="icon-192.png" sizes="192x192" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <!-- iOS PWA essentials -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Rating" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="format-detection" content="telephone=no" />
+  <!-- Optional specific size icon (falls back to 192 if 180 not present) -->
+  <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png" />
+  <meta name="theme-color" content="#0f1113" />
+  <link rel="stylesheet" href="styles.css" />
+  <script>
+    // Ensure correct subpath when hosted on GitHub Pages (avoids 404 in iOS standalone)
+    (function(){
+      var repo = 'fivestar-rating-kiosk';
+      var path = window.location.pathname;
+
+      if (!location.hostname.endsWith('.github.io')) return; // Not GitHub Pages
+
+      // Detect intended environment from current path
+      var isStaging = /\/staging(?:\/|$)/.test(path);
+      var prMatch = path.match(/\/pr-(\d+)(?:\/|$)/);
+
+      var expectedBase = '/' + repo + '/';
+      if (isStaging) expectedBase += 'staging/';
+      else if (prMatch) expectedBase += 'pr-' + prMatch[1] + '/';
+
+      // If not at expected base, redirect
+      if (!path.startsWith(expectedBase)) {
+        var target = expectedBase + location.search + (location.hash || '');
+        location.replace(target);
+      }
+    })();
+    // iOS aggressive viewport lock (kept out of meta for validator compliance)
+    (function(){
+      var ua=navigator.userAgent;
+      if(!(/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints>1))) return;
+      var vp=document.querySelector('meta[name=viewport]');
+      if(!vp) return;
+      var BASE='width=device-width,initial-scale=1,viewport-fit=cover';
+      function lock(){vp.setAttribute('content',BASE+',maximum-scale=1');}
+      lock();[80,160,320,640].forEach(function(t){setTimeout(lock,t);});
+      window.addEventListener('orientationchange',function(){setTimeout(lock,140);setTimeout(lock,400);});
+    })();
+  </script>
+</head>
+
+<body>
+  <!-- Hidden SVG symbol sprite -->
+  <svg aria-hidden="true" class="hidden-sprite">
+    <symbol id="star-shape" viewBox="0 0 24 24">
+      <path d="M12 2.4l2.9 6 6.6.9-4.9 4.8 1.2 6.6L12 17.9 6.2 20.7l1.2-6.6L2.5 9.3l6.6-.9L12 2.4z" />
+    </symbol>
+  </svg>
+  <!-- Environment badge (staging/preview only, hidden in production) -->
+  <div id="envBadge" class="env-badge hidden" aria-label="Environment indicator"></div>
+  <div class="wrap">
+    <div class="panel" id="panel">
+      <div id="updateToast">Update ready – tap to refresh</div>
+      <div id="adminOverlay" class="admin-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+        <div class="admin-box">
+          <button class="admin-close" type="button" aria-label="Close">×</button>
+          <h2 id="adminTitle">Kiosk Admin <span id="wakeStatus" class="wake-badge" data-state="off">WAKE OFF</span></h2>
+          <div class="admin-meta">
+            <div class="label">Revision</div>
+            <div id="adminRevision">--</div>
+            <div class="label">Station ID</div>
+            <div id="adminStationId">--</div>
+            <div class="label">Product</div>
+            <div id="adminProduct">--</div>
+            <div class="label">Average</div>
+            <div id="adminAvg">--</div>
+            <div class="label">Ratings</div>
+            <div id="adminCount">0</div>
+            <div class="label">Online</div>
+            <div id="adminOnline">--</div>
+            <div class="label">Last Backup</div>
+            <div id="adminLastBackup">--</div>
+            <div class="label">Snapshot Keys</div>
+            <div id="adminSnapshotCount">--</div>
+            <div class="label">Persistent</div>
+            <div id="adminPersistent">--</div>
+          </div>
+          <div class="admin-actions">
+            <button id="wakeToggle" type="button">Enable Wake Lock</button>
+            <button id="reconfigStation" type="button" class="sec">Reconfigure Station</button>
+            <button id="diagToggle" type="button" class="sec">Diagnostics</button>
+            <button id="checkUpdate" type="button" class="sec">Check Update</button>
+            <button id="backupNow" type="button" class="sec">Backup Now</button>
+            <button id="exportData" type="button" class="sec">Export</button>
+            <button id="seedDemo" type="button" class="sec">Seed Demo</button>
+            <button id="arrangeLogoBtn" type="button" class="sec">Arrange Logo</button>
+            <button id="clearData" type="button" class="sec danger">Clear</button>
+          </div>
+          <div class="admin-settings" id="adminSettings">
+            <div class="admin-settings-title">Settings</div>
+            <div class="admin-settings-row">
+              <label for="settingReturnTimeout" class="admin-settings-label">Auto-return after rating</label>
+              <select id="settingReturnTimeout" class="admin-settings-select">
+                <option value="5">5 s</option>
+                <option value="8">8 s</option>
+                <option value="10">10 s</option>
+                <option value="15">15 s</option>
+                <option value="20">20 s</option>
+                <option value="30">30 s</option>
+              </select>
+            </div>
+          </div>
+          <div class="admin-stats" id="adminStats" aria-label="Rating Buckets"></div>
+          <div id="adminDiag" class="hidden" aria-label="Diagnostics"></div>
+          <div class="u-muted-note">Tap corner hotspot (5x) or long-press corner to open. Tap outside box or press ESC
+            to close.</div>
+        </div>
+      </div>
+      <div class="top-bar">
+        <div class="bar-group" id="leftTools">
+          <button class="icon-btn" id="themeToggle" aria-label="Toggle theme"></button>
+          <button class="icon-btn" id="fsToggle" aria-label="Fullscreen"></button>
+        </div>
+        <div class="u-flex-1"></div>
+      </div>
+      <h1 id="headingMain">Product Rating</h1>
+      <div id="averageBlock" class="average-block hidden" aria-describedby="liveAnnouncer">
+        <div id="avgStars" class="avg-stars" aria-hidden="true"></div>
+        <div id="avgLine" class="avg-line">-- out of 5 Stars <small>with 0 Ratings</small></div>
+      </div>
+      <div id="resultsActions" class="results-actions hidden">
+        <p id="resultsEncourage" class="results-encourage">See how others feel about this product!</p>
+        <button id="rateAnotherBtn" type="button" class="circle-timer-btn" aria-label="Dismiss and rate another product">
+          <svg viewBox="0 0 100 100" class="circle-timer-svg" aria-hidden="true">
+            <circle class="circle-timer-track" cx="50" cy="50" r="42"/>
+            <circle id="circleTimerArc" class="circle-timer-arc" cx="50" cy="50" r="42"/>
+          </svg>
+          <span class="circle-timer-icon" aria-hidden="true">&#x2715;</span>
+        </button>
+        <p class="results-countdown" aria-live="polite"><span id="resultsSummaryCount" class="results-summary-count hidden"></span> Returning in <span id="autoCountdown">10</span>s</p>
+      </div>
+      <p id="subtitle" class="rating-text">Enter a name to begin</p>
+
+      <div id="stationSetupWrapper" class="station-setup hidden">
+        <div id="setupLabelDisplay" class="setup-label-display" role="button" tabindex="0" aria-label="Edit the rating prompt text">
+          <span id="setupLabelText" class="setup-label-text">Rate the Feel of this Bed</span><span class="setup-label-edit-icon" aria-hidden="true"> ✎</span>
+        </div>
+        <textarea id="setupLabelInput" class="setup-label-input hidden" rows="2" maxlength="120" placeholder="Rate the Feel of this Bed" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+        <p class="setup-instructions">Configure this kiosk station<br>Enter the product name(s) to rate:</p>
+        <div id="setupTitlesList" class="setup-titles-list"></div>
+        <button id="addTitleBtn" type="button" class="setup-btn setup-btn-sec">&#43; Add Product</button>
+        <button id="saveStationBtn" type="button" class="setup-btn">Save &amp; Start</button>
+        <button id="setupArrangeLogoBtn" type="button" class="setup-btn setup-btn-sec">Arrange Logo</button>
+        <div id="stationIdDisplay" class="station-id-display"></div>
+      </div>
+
+      <div id="idInputWrapper" class="input-row hidden">
+        <input id="idInput" placeholder="Product Name" maxlength="40" autocomplete="off" />
+        <button id="startBtn" type="button">Start</button>
+        <div class="notice">Local demo only (stored in this browser).</div>
+      </div>
+
+      <div id="yourLabel" class="section-label hidden">Rate the Feel of this Bed</div>
+      <div id="starsContainer" class="stars hidden" role="radiogroup" aria-label="Select a star rating"></div>
+      <div id="ratingGroupsContainer" class="rating-groups hidden"></div>
+      <div id="submitWrapper" class="submit-wrapper hidden">
+        <p class="encourage-text">See how others feel about this product!</p>
+        <button id="submitBtn" type="button" class="submit-btn">Submit Rating</button>
+      </div>
+      <div id="kbdHint" class="kbd-hint hidden">Press 1–5 or use arrow keys, Enter to submit.</div>
+
+      <div id="status" class="status" aria-live="polite"></div>
+      <div id="liveAnnouncer" class="visually-hidden" aria-live="polite"></div>
+      <div class="footer-logo" aria-label="Brand logo">
+        <img class="logo-dark" src="assets/logo-dark.png" alt="Brand logo" />
+        <img class="logo-light" src="assets/logo-light.png" alt="Brand logo" />
+      </div>
+    </div>
+  </div>
+  <div id="logoEditBar" class="logo-edit-bar hidden" role="toolbar" aria-label="Logo positioning controls">
+    <span class="logo-edit-grip" aria-hidden="true" title="Drag the logo to reposition">⠿</span>
+    <span class="logo-edit-bar-sep"></span>
+    <label class="logo-edit-rotate-wrap" title="Rotate logo">
+      <span class="logo-edit-rotate-icon" aria-hidden="true">↻</span>
+      <input type="range" id="logoEditRotate" class="logo-rotate-slider" min="-45" max="45" value="0" step="1" aria-label="Rotation angle">
+      <span id="logoEditRotateVal" class="logo-edit-rotate-val">0°</span>
+    </label>
+    <span class="logo-edit-bar-sep"></span>
+    <button id="logoThemeToggle" type="button" class="logo-edit-theme-btn" title="Toggle logo variant: auto / dark / light">🌓</button>
+    <span class="logo-edit-bar-sep"></span>
+    <button id="logoEditDone" type="button">Done</button>
+  </div>
+  <script src="app.js" defer></script>
+  </body>
+</html>
+
+

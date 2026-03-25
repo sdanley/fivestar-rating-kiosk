@@ -1,0 +1,348 @@
+# Five Star Rating Kiosk
+
+A modern, offline-capable Progressive Web App (PWA) for collecting product ratings in kiosk mode. Perfect for retail stores, trade shows, or any environment where you need to gather customer feedback on products.
+
+## Overview
+
+Five Star Rating Kiosk is a browser-based rating application designed to run in kiosk mode on tablets or touch-screen devices. It stores all ratings locally using browser storage (localStorage and IndexedDB), making it fully functional without an internet connection. The application includes anti-zoom protection, wake lock support, and a comprehensive admin panel for managing ratings.
+
+## Features
+
+### Core Functionality
+- **5-Star Rating System**: Simple and intuitive star-based rating interface
+- **Offline-First**: Works completely offline using localStorage and IndexedDB
+- **PWA Support**: Can be installed as a standalone app on iOS and Android devices
+- **Real-Time Averages**: Automatically calculates and displays average ratings with fractional stars
+- **Persistent Storage**: Automatic backups to IndexedDB every 2 minutes with recovery on app restart
+
+### Kiosk Mode Features
+- **Full-Screen Support**: Native fullscreen API integration
+- **Anti-Zoom Protection**: Prevents pinch-to-zoom on iOS and other touch devices
+- **Wake Lock**: Keeps screen awake during use (with fallback for iOS)
+- **Auto-Hide Controls**: Top bar automatically hides during inactivity
+- **Gesture Blocking**: Prevents accidental navigation gestures
+- **Touch-Optimized**: Large touch targets and smooth animations
+
+### Admin Panel
+Access hidden admin features by:
+- Tapping the bottom-right corner 5 times rapidly, or
+- Long-pressing the bottom-right corner for 900ms (0.9 seconds)
+
+Admin features include:
+- **Statistics Dashboard**: View rating distribution and averages
+- **Wake Lock Control**: Enable/disable screen wake lock
+- **Data Export**: Export all ratings as JSON
+- **Data Management**: Clear all ratings
+- **Diagnostics**: View detailed system information
+- **Update Checker**: Manually check for app updates
+- **Backup Status**: View IndexedDB backup status and timestamp
+
+### User Interface
+- **Dark/Light Theme**: Toggle between dark and light color schemes
+- **Keyboard Navigation**: Full keyboard support (1-5 for ratings, arrow keys, Enter)
+- **Accessibility**: ARIA labels, screen reader support, and keyboard hints
+- **Responsive Design**: Adapts to different screen sizes and orientations
+- **Smooth Animations**: Polished transitions and visual feedback
+
+## Technology Stack
+
+- **Pure Vanilla JavaScript**: No frameworks or dependencies
+- **HTML5 & CSS3**: Modern web standards
+- **Service Worker**: Offline functionality and caching
+- **localStorage**: Primary data storage
+- **IndexedDB**: Persistent backup storage
+- **Wake Lock API**: Keep screen active
+- **Fullscreen API**: Immersive kiosk experience
+- **Web Manifest**: PWA installation support
+
+## Installation
+
+### Basic Setup (Web Server)
+
+1. Clone or download this repository
+2. Serve the files using any web server:
+   ```bash
+   # Using Python 3
+   python -m http.server 8000
+   
+   # Using Node.js http-server
+   npx http-server -p 8000
+   
+   # Using PHP
+   php -S localhost:8000
+   ```
+3. Open `http://localhost:8000` in your browser
+
+### GitHub Pages Deployment
+
+This app is configured to work on GitHub Pages:
+
+1. Push the repository to GitHub
+2. Enable GitHub Pages in repository settings (use `main` branch)
+3. Access at `https://yourusername.github.io/fivestar-rating-kiosk/`
+
+### Staging and Release Flow
+
+Use a staging-first flow to reduce regressions:
+
+1. Create feature branches from `staging`
+2. Open PRs into `staging` and validate at `/staging/`
+3. Promote `staging` to `main` only after validation
+4. Use `docs/RELEASE_CHECKLIST.md` for production promotions
+
+### PWA Installation
+
+#### On iOS (iPad/iPhone):
+1. Open the app in Safari
+2. Tap the Share button
+3. Select "Add to Home Screen"
+4. Tap "Add" to install
+
+#### On Android:
+1. Open the app in Chrome
+2. Tap the menu (⋮)
+3. Select "Add to Home Screen" or "Install App"
+4. Confirm installation
+
+#### On Desktop (Chrome/Edge):
+1. Click the install icon (⊕) in the address bar
+2. Click "Install" in the dialog
+
+## Usage
+
+### Getting Started
+
+1. **Enter Product Name**: When you first open the app, enter a product name to begin collecting ratings
+2. **Share the Link**: The product name is stored in the URL (e.g., `?m=ProductName`) for easy sharing
+3. **Collect Ratings**: Users tap 1-5 stars to submit their rating
+4. **View Results**: Average rating and distribution are displayed in real-time
+
+### Quick Start URL
+
+You can create a direct link to a specific product:
+```
+https://your-domain.com/index.html?m=Product%20Name
+```
+
+### Keyboard Shortcuts
+
+- **1-5**: Rate with 1-5 stars
+- **Arrow Keys**: Navigate star selection
+- **Enter**: Submit selected rating
+- **Escape**: Show top bar / close admin panel
+- **Ctrl+Shift+C**: Change product name
+
+### Product Management
+
+To change the product being rated:
+- Triple-tap the product heading, or
+- Long-press the product heading (900ms), or
+- Use keyboard shortcut Ctrl+Shift+C
+
+## Browser Compatibility
+
+### Recommended Browsers:
+- **iOS Safari** (iOS 13+) - Fully tested and optimized
+- **Chrome** (Desktop & Android) - Full support
+- **Edge** (Desktop) - Full support
+- **Samsung Internet** - Full support
+
+### Features by Browser:
+| Feature | iOS Safari | Chrome | Edge | Firefox |
+|---------|-----------|--------|------|---------|
+| Basic Ratings | ✅ | ✅ | ✅ | ✅ |
+| Service Worker | ✅ | ✅ | ✅ | ✅ |
+| PWA Install | ✅ | ✅ | ✅ | ⚠️ |
+| Wake Lock | Fallback* | ✅ | ✅ | ✅ |
+| Fullscreen | ✅ | ✅ | ✅ | ✅ |
+
+*✅ = Full Support, ⚠️ = Partial Support, ❌ = Not Supported.*
+
+*iOS Safari uses video element fallback for Wake Lock as native API is not fully supported.*
+
+## Data Storage
+
+### Storage Hierarchy:
+1. **localStorage** (Primary): Real-time rating data with instant access
+2. **IndexedDB** (Backup): Automatic backup every 2 minutes
+3. **Auto-Recovery**: Automatically restores from IndexedDB if localStorage is cleared
+
+### Data Format:
+Each product's ratings are stored as:
+```json
+{
+  "count": 10,
+  "total": 42,
+  "buckets": [0, 1, 2, 4, 3]
+}
+```
+
+### Export Format:
+Admin export creates a JSON file with:
+```json
+{
+  "exported": 1702123456789,
+  "data": {
+    "rating:mattress:ProductName": "{...}"
+  }
+}
+```
+
+## Development
+
+### Testing the Application
+
+#### Quick start (local server)
+
+```bash
+# Python 3
+python -m http.server 8000
+
+# Node.js
+npx http-server -p 8000
+```
+
+Then open `http://localhost:8000` in your browser (Chrome or Safari recommended).
+
+#### Feature checklist
+
+| Feature | How to test |
+|---------|-------------|
+| **Station setup** | On first load (or after clearing `localStorage['station:config']`), the setup screen prompts for one or more product titles. Enter a name and tap **Save Station**. A deterministic 8-char Station ID is shown (e.g., `660db036`). |
+| **Dual / split-station** | During station setup, add a second product title with **+ Add Product**. On each "Rate Another" / auto-return cycle the app cycles through both titles. |
+| **Rating flow** | Tap a star — it enters *pending* state (highlighted, no submit yet). Tap **Submit** to commit. Average is shown only **after** submission. |
+| **Auto-return** | After submitting, a countdown timer appears. The app returns to the rating screen automatically after the configured timeout. |
+| **"Rate Another"** | Tap the button any time during the results view to return immediately without waiting for the timer. |
+| **Admin panel** | Tap the bottom-right corner 5× rapidly (or long-press ~900 ms). The admin panel shows station ID, rating stats, settings, and export. |
+| **Auto-return timeout** | Inside the admin panel → **Settings**, change the auto-return timeout dropdown; the new value takes effect immediately. |
+| **Reconfigure station** | Inside the admin panel, tap **Reconfigure Station** to re-run the first-run setup without clearing ratings. |
+| **Dark / light theme** | Toggle the moon/sun icon in the top bar. Dark mode uses Leggett Blue (`#002855`) background; light mode uses a white background with Leggett Blue text. |
+| **Empty star outlines** | In dark mode, unselected star outlines appear in ISPA Green (`#8acc9f`). |
+| **Offline / PWA** | Load the page once, then disconnect from the internet and reload — the app should continue working from the service worker cache. |
+| **Data export** | Open the admin panel and tap **Export JSON** to download a JSON file of all stored ratings. |
+
+#### Reconfigure for a fresh test run
+
+To reset the app back to first-run state:
+
+```js
+// Paste in the browser's DevTools console
+localStorage.removeItem('station:config');
+location.reload();
+```
+
+To clear all ratings as well:
+
+```js
+Object.keys(localStorage)
+  .filter(k => k.startsWith('rating:'))
+  .forEach(k => localStorage.removeItem(k));
+```
+
+### File Structure:
+```
+fivestar-rating-kiosk/
+├── index.html           # Main HTML structure
+├── app.js              # Application logic
+├── styles.css          # Styling and themes
+├── sw.js               # Service Worker for offline support
+├── manifest.webmanifest # PWA manifest
+├── version.json        # Version tracking
+├── icon-*.{svg,png}    # App icons
+└── logo*.svg           # Brand logos
+```
+
+### Service Worker:
+- Cache version: Defined in `sw.js` as `VERSION` constant
+- Update `VERSION` constant to invalidate cache
+- Offline-first strategy for all assets
+- Automatic cache cleanup on activation
+
+### Version Updates:
+1. Update `version.json` with new semantic version (e.g., "1.0.20")
+2. Update `VERSION` constant in `sw.js` for cache invalidation (e.g., 'v14')
+   - Note: These version numbers serve different purposes and don't need to match
+3. Keep both updates in the same PR as user-facing changes (do not split into a follow-up PR)
+4. Deploy changes
+5. Users can check for updates in admin panel
+
+### Customization:
+- **Colors**: Edit CSS custom properties in `styles.css`
+- **Branding**: Replace `logo.svg` and `logo-gray.svg`
+- **Icons**: Replace icon files (maintain sizes: 192x192, 512x512)
+- **Storage Key**: Modify `storageKey()` function in `app.js` (default prefix is `rating:mattress:`—change to match your domain)
+
+## Security & Privacy
+
+- **No External Connections**: All data stays on device
+- **No Analytics**: No tracking or telemetry
+- **No Dependencies**: Zero third-party code
+- **Local Storage Only**: Data never leaves the browser
+- **HTTPS Recommended**: Required for PWA features and Service Worker
+
+## Kiosk Deployment Tips
+
+1. **iOS Setup**:
+   - Use Guided Access mode to prevent app exit
+   - Enable Auto-Lock > Never in Settings
+   - Install as PWA for full-screen experience
+
+2. **Android Setup**:
+   - Use Kiosk Mode apps or Android Enterprise
+   - Enable Stay Awake in Developer Options
+   - Pin the app screen (if supported)
+
+3. **Desktop Setup**:
+   - Start in fullscreen mode (F11)
+   - Consider browser kiosk extensions
+   - Disable keyboard shortcuts in browser settings
+
+4. **Network**:
+   - App works fully offline after first load
+   - No internet connection required
+   - Optional: Disable WiFi to prevent interference
+
+## Known Limitations
+
+- Data is device-specific (not synced across devices)
+- No cloud backup or export API
+- localStorage has ~5-10MB limit (varies by browser; approximately 50,000-100,000 ratings based on typical limits)
+- Wake Lock fallback on iOS uses video element workaround
+
+## Troubleshooting
+
+### Ratings Not Saving:
+- Check browser storage isn't full
+- Try exporting data and clearing storage
+- Verify localStorage isn't disabled
+
+### App Not Installing as PWA:
+- Must be served over HTTPS (or localhost)
+- Service Worker must register successfully
+- Check browser console for errors
+
+### Screen Keeps Turning Off:
+- Enable Wake Lock in admin panel
+- Check device auto-lock settings
+- iOS uses video fallback if Wake Lock unavailable
+
+### Update Not Appearing:
+- Use "Check Update" in admin panel
+- Hard refresh: Ctrl+Shift+R (or Cmd+Shift+R on Mac)
+- Clear browser cache if needed
+
+## Contributing
+
+This is a self-contained application with no build process. To contribute:
+1. Make changes to source files
+2. Test in multiple browsers and devices
+3. For user-facing changes, update both `version.json` and `sw.js` `VERSION`
+4. Submit pull request with description
+
+## License
+
+[Add your license here]
+
+## Credits
+
+Developed for use in retail and kiosk environments. Optimized for iOS Safari with extensive testing on iPad devices.
