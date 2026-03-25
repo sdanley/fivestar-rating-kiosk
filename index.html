@@ -135,7 +135,7 @@
         <div id="avgLine" class="avg-line">-- out of 5 Stars <small>with 0 Ratings</small></div>
       </div>
       <div id="resultsActions" class="results-actions hidden">
-        <p class="results-encourage">See how others feel about this product!</p>
+        <p id="resultsEncourage" class="results-encourage">See how others feel about this product!</p>
         <button id="rateAnotherBtn" type="button" class="circle-timer-btn" aria-label="Dismiss and rate another product">
           <svg viewBox="0 0 100 100" class="circle-timer-svg" aria-hidden="true">
             <circle class="circle-timer-track" cx="50" cy="50" r="42"/>
@@ -143,7 +143,7 @@
           </svg>
           <span class="circle-timer-icon" aria-hidden="true">&#x2715;</span>
         </button>
-        <p class="results-countdown" aria-live="polite">Returning in <span id="autoCountdown">10</span>s</p>
+        <p class="results-countdown" aria-live="polite"><span id="resultsSummaryCount" class="results-summary-count hidden"></span> Returning in <span id="autoCountdown">10</span>s</p>
       </div>
       <p id="subtitle" class="rating-text">Enter a name to begin</p>
 
