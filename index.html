@@ -24,8 +24,20 @@
     (function(){
       var repo = 'fivestar-rating-kiosk';
       var path = window.location.pathname;
-      if (location.hostname.endsWith('.github.io') && !path.includes('/'+repo+'/')) {
-        var target = '/' + repo + '/' + (location.search ? '' : '') + (location.hash || '');
+
+      if (!location.hostname.endsWith('.github.io')) return; // Not GitHub Pages
+
+      // Detect intended environment from current path
+      var isStaging = /\/staging(?:\/|$)/.test(path);
+      var prMatch = path.match(/\/pr-(\d+)(?:\/|$)/);
+
+      var expectedBase = '/' + repo + '/';
+      if (isStaging) expectedBase += 'staging/';
+      else if (prMatch) expectedBase += 'pr-' + prMatch[1] + '/';
+
+      // If not at expected base, redirect
+      if (!path.startsWith(expectedBase)) {
+        var target = expectedBase + location.search + (location.hash || '');
         location.replace(target);
       }
     })();
@@ -50,6 +62,8 @@
       <path d="M12 2.4l2.9 6 6.6.9-4.9 4.8 1.2 6.6L12 17.9 6.2 20.7l1.2-6.6L2.5 9.3l6.6-.9L12 2.4z" />
     </symbol>
   </svg>
+  <!-- Environment badge (staging/preview only, hidden in production) -->
+  <div id="envBadge" class="env-badge hidden" aria-label="Environment indicator"></div>
   <div class="wrap">
     <div class="panel" id="panel">
       <div id="updateToast">Update ready – tap to refresh</div>
@@ -121,7 +135,7 @@
         <div id="avgLine" class="avg-line">-- out of 5 Stars <small>with 0 Ratings</small></div>
       </div>
       <div id="resultsActions" class="results-actions hidden">
-        <p class="results-encourage">See how others feel about this product!</p>
+        <p id="resultsEncourage" class="results-encourage">See how others feel about this product!</p>
         <button id="rateAnotherBtn" type="button" class="circle-timer-btn" aria-label="Dismiss and rate another product">
           <svg viewBox="0 0 100 100" class="circle-timer-svg" aria-hidden="true">
             <circle class="circle-timer-track" cx="50" cy="50" r="42"/>
@@ -129,6 +143,7 @@
           </svg>
           <span class="circle-timer-icon" aria-hidden="true">&#x2715;</span>
         </button>
+        <p class="results-countdown" aria-live="polite"><span id="resultsSummaryCount" class="results-summary-count hidden"></span> Returning in <span id="autoCountdown">10</span>s</p>
       </div>
       <p id="subtitle" class="rating-text">Enter a name to begin</p>
 
