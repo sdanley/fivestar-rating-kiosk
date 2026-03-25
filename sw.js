@@ -1,6 +1,6 @@
 // Service Worker: offline + kiosk enhancements
 // Increment version to invalidate old caches when app changes
-const VERSION = 'v14';
+const VERSION = 'v15';
 const SCOPE_PATH = self.registration && self.registration.scope
   ? new URL(self.registration.scope).pathname
   : '/';
