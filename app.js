@@ -141,8 +141,7 @@
   const saveStationBtn=document.getElementById('saveStationBtn');
   const addTitleBtn=document.getElementById('addTitleBtn');
   const setupLabelInput=document.getElementById('setupLabelInput');
-  const setupLabelDisplay=document.getElementById('setupLabelDisplay');
-  const setupLabelText=document.getElementById('setupLabelText');
+  const setupEditPromptBtn=document.getElementById('setupEditPromptBtn');
   const DEFAULT_RATING_LABEL='Product Rating';
   let ratingPromptText=DEFAULT_RATING_LABEL;
   const STAR_COUNT=5; let currentId=''; let selected=0; let hoverVal=0; let pending=0; let pendingMap={};
@@ -185,38 +184,42 @@
   function showResultsPhase(agg){clearAutoReturn();const {txt,v}=fmtAvg(agg.count,agg.total);if(avgLine)avgLine.innerHTML=`${txt} out of 5 Stars`;renderFractional(v);if(heading)heading.classList.add('hidden');if(yourLabel){yourLabel.textContent=currentId;yourLabel.classList.remove('hidden');}if(resultsEncourage)resultsEncourage.classList.add('hidden');if(resultsSummaryCount){const c=agg.count||0;resultsSummaryCount.textContent=`${c} total rating${c===1?'':'s'} \u2022`;resultsSummaryCount.classList.remove('hidden');}if(averageBlock)averageBlock.classList.remove('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.remove('hidden');if(liveAnnouncer)liveAnnouncer.textContent=agg.count?`Average ${txt} stars from ${agg.count} rating${agg.count===1?'':'s'}.`:'No ratings yet.';startAutoReturn();}
   function selectPending(val){pending=val;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');showHint();}
   // ---- Setup Screen ----
-  // Wiggle scheduler for the subtle label display
+  // Periodic wiggle (pencil) + shimmer (title) to hint the title is editable
   let _wiggleTimer=null;
   function _cancelWiggle(){clearTimeout(_wiggleTimer);_wiggleTimer=null;}
   function _scheduleWiggle(){
     _cancelWiggle();
     _wiggleTimer=setTimeout(function tick(){
       if(setupLabelInput?.classList.contains('hidden')){
-        setupLabelDisplay.classList.remove('wiggle');void setupLabelDisplay.offsetWidth;
-        setupLabelDisplay.classList.add('wiggle');
+        if(setupEditPromptBtn){setupEditPromptBtn.classList.remove('wiggle');void setupEditPromptBtn.offsetWidth;setupEditPromptBtn.classList.add('wiggle');}
+        if(heading){heading.classList.remove('shimmer');void heading.offsetWidth;heading.classList.add('shimmer');}
       }
       _wiggleTimer=setTimeout(tick,8000+Math.random()*5000);
     },6000+Math.random()*5000);
   }
-  // Show the subtle ghost display (collapse textarea)
-  function _showLabelDisplay(){
+  // Exit edit mode: hide textarea, restore heading display
+  function _exitLabelEdit(){
+    const val=(setupLabelInput?.value||'').trim();
+    if(heading){heading.textContent=val||DEFAULT_RATING_LABEL;heading.classList.remove('hidden');}
     if(setupLabelInput)setupLabelInput.classList.add('hidden');
-    if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');
-    const val=setupLabelInput?.value.trim()||'';
-    if(setupLabelText){setupLabelText.textContent=val||DEFAULT_RATING_LABEL;setupLabelText.style.opacity=val?'':'0.55';setupLabelText.style.fontStyle=val?'':'italic';}
+    if(setupEditPromptBtn)setupEditPromptBtn.classList.remove('hidden');
+    _scheduleWiggle();
   }
-  // Expand to full textarea (on tap)
+  // Enter edit mode: hide heading, show identical-styled textarea in its place
   function _showLabelEdit(){
-    if(setupLabelDisplay)setupLabelDisplay.classList.add('hidden');
-    if(setupLabelInput){setupLabelInput.classList.remove('hidden');setupLabelInput.focus();}
+    _cancelWiggle();
+    if(heading){heading.classList.remove('shimmer');heading.classList.add('hidden');}
+    if(setupEditPromptBtn)setupEditPromptBtn.classList.add('hidden');
+    if(setupLabelInput){setupLabelInput.value=resolveRatingPromptLabel();setupLabelInput.classList.remove('hidden');setupLabelInput.focus();setupLabelInput.select();}
   }
   function addSetupTitleInput(val){const inp=document.createElement('input');inp.className='setup-title-input';inp.placeholder='Product Name';inp.maxLength=60;inp.autocomplete='off';if(val)inp.value=val;inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addSetupTitleInput('');updateStationIdPreview();}});inp.addEventListener('blur',()=>{if(!inp.value.trim()&&setupTitlesList&&setupTitlesList.querySelectorAll('.setup-title-input').length>1){inp.remove();updateStationIdPreview();}});if(setupTitlesList)setupTitlesList.appendChild(inp);inp.focus();}
   function updateStationIdPreview(){if(!stationIdDisplay||!setupTitlesList)return;const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(titles.length){stationIdDisplay.textContent='Station ID: '+computeStationId(titles);}else{stationIdDisplay.textContent='';}}
-  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.getElementById('kbdHint')?.classList.add('hidden');document.querySelector('.panel')?.classList.remove('rating-active');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';const _cfg=loadStationConfig();const _savedLabel=_cfg?.label||'';if(setupLabelInput){setupLabelInput.value=_savedLabel;setupLabelInput.classList.add('hidden');}if(setupLabelText){setupLabelText.textContent=_savedLabel||DEFAULT_RATING_LABEL;setupLabelText.style.opacity=_savedLabel?'':'0.55';setupLabelText.style.fontStyle=_savedLabel?'':'italic';}if(setupLabelDisplay)setupLabelDisplay.classList.remove('hidden');_scheduleWiggle();}
-  function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');_cancelWiggle();}
-  setupLabelDisplay?.addEventListener('click',_showLabelEdit);
-  setupLabelDisplay?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();_showLabelEdit();}});
-  setupLabelInput?.addEventListener('blur',()=>setTimeout(_showLabelDisplay,120));
+  function showSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.remove('hidden');if(idInputWrapper)idInputWrapper.classList.add('hidden');if(subtitle)subtitle.classList.add('hidden');if(starsContainer)starsContainer.classList.add('hidden');if(ratingGroupsContainer)ratingGroupsContainer.classList.add('hidden');if(yourLabel)yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(averageBlock)averageBlock.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.getElementById('kbdHint')?.classList.add('hidden');document.querySelector('.panel')?.classList.remove('rating-active');if(setupTitlesList)setupTitlesList.innerHTML='';addSetupTitleInput('');if(stationIdDisplay)stationIdDisplay.textContent='';const _cfg=loadStationConfig();const _savedLabel=_cfg?.label||'';if(setupLabelInput){setupLabelInput.value=_savedLabel;setupLabelInput.classList.add('hidden');}if(heading){heading.textContent=_savedLabel||DEFAULT_RATING_LABEL;heading.classList.remove('hidden');}if(setupEditPromptBtn)setupEditPromptBtn.classList.remove('hidden');_scheduleWiggle();}
+  function hideSetupScreen(){if(stationSetupWrapper)stationSetupWrapper.classList.add('hidden');if(setupEditPromptBtn)setupEditPromptBtn.classList.add('hidden');if(setupLabelInput)setupLabelInput.classList.add('hidden');if(heading)heading.classList.remove('shimmer');_cancelWiggle();}
+  setupEditPromptBtn?.addEventListener('click',_showLabelEdit);
+  setupEditPromptBtn?.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();_showLabelEdit();}});
+  heading?.addEventListener('animationend',()=>heading.classList.remove('shimmer'));
+  setupLabelInput?.addEventListener('blur',()=>setTimeout(_exitLabelEdit,120));
   addTitleBtn?.addEventListener('click',()=>{addSetupTitleInput('');updateStationIdPreview();});
   if(setupTitlesList){setupTitlesList.addEventListener('input',updateStationIdPreview);}
   saveStationBtn?.addEventListener('click',()=>{const titles=[...setupTitlesList.querySelectorAll('.setup-title-input')].map(i=>i.value.trim()).filter(Boolean);if(!titles.length){flash('Enter at least one product name.',true);return;}const label=setupLabelInput?.value.trim()||'';const stationId=computeStationId(titles);saveStationConfig({titles,stationId,label});setRatingPromptLabel(label);stationTitles=titles;currentTitleIndex=0;hideSetupScreen();initId(titles[0]);});
@@ -435,7 +438,7 @@
   document.addEventListener('keydown',e=>{if(!currentId)return;if(['ArrowRight','ArrowUp','ArrowLeft','ArrowDown','1','2','3','4','5'].includes(e.key))showHint();if(e.key>='1'&&e.key<='5'){selectPending(Number(e.key));return;}if(['ArrowRight','ArrowUp'].includes(e.key)){e.preventDefault();pending=pending?Math.min(5,pending+1):1;paintStars();if(submitWrapper)submitWrapper.classList.remove('hidden');return;}if(['ArrowLeft','ArrowDown'].includes(e.key)){e.preventDefault();if(pending>1)pending--;else if(!pending)pending=5;else pending=0;paintStars();if(pending&&submitWrapper)submitWrapper.classList.remove('hidden');return;}if(e.key==='Enter'&&pending){commitRating(pending);}});
   starsContainer.addEventListener('focusin',()=>{showHint();});
   function enterChangeMode(){clearAutoReturn();if(!idInputWrapper)return;idInputWrapper.classList.remove('hidden');if(idInput){idInput.value=currentId;idInput.focus();}starsContainer.classList.add('hidden');averageBlock.classList.add('hidden');yourLabel.classList.add('hidden');if(submitWrapper)submitWrapper.classList.add('hidden');if(resultsActions)resultsActions.classList.add('hidden');document.querySelector('.panel')?.classList.remove('rating-active');statusDiv.textContent='Change product name';}
-  let headingTapTimes=[];heading.addEventListener('click',()=>{const now=Date.now();headingTapTimes=headingTapTimes.filter(t=>now-t<1200);headingTapTimes.push(now);if(headingTapTimes.length>=3){headingTapTimes=[];enterChangeMode();}});
+  let headingTapTimes=[];heading.addEventListener('click',()=>{if(setupEditPromptBtn&&!setupEditPromptBtn.classList.contains('hidden')){_showLabelEdit();return;}const now=Date.now();headingTapTimes=headingTapTimes.filter(t=>now-t<1200);headingTapTimes.push(now);if(headingTapTimes.length>=3){headingTapTimes=[];enterChangeMode();}});
   let pressTimer=null;function cancelPress(){if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}}
   ['touchstart','mousedown'].forEach(ev=>heading.addEventListener(ev,(e)=>{if(ev==='mousedown'&&e.button!==0)return;cancelPress();pressTimer=setTimeout(()=>{enterChangeMode();},900);},{passive:true}));
   ['touchend','touchcancel','mouseup','mouseleave','blur'].forEach(ev=>heading.addEventListener(ev,cancelPress));
