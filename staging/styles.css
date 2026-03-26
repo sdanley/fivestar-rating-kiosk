@@ -201,16 +201,23 @@ html.theme-light .circle-timer-track { stroke:rgba(0,0,0,.10); }
 .setup-title-input { background:var(--panel-alt); border:2px solid #273039; color:var(--text); padding:.85rem 1.1rem; font-size:1.2rem; border-radius:22px; text-align:center; letter-spacing:.5px; font-weight:600; -webkit-user-select:text; user-select:text; width:100%; }
 .setup-title-input:focus { outline:none; box-shadow:var(--focus); border-color:var(--accent); }
 textarea.setup-title-input { resize:none; line-height:1.45; min-height:5.2rem; font-family:inherit; }
-/* Subtle label ghost display (setup screen) */
-.setup-label-display { width:100%; padding:.65rem 1.1rem; border:2px dashed rgba(255,204,51,.28); border-radius:22px; cursor:pointer; color:var(--text); font-size:clamp(1.5rem,3.5vw,2.5rem); font-weight:800; letter-spacing:.55px; display:flex; align-items:center; justify-content:center; gap:.3rem; background:transparent; transition:border-color .25s,color .2s,background .2s; -webkit-user-select:none; user-select:none; line-height:1.15; text-align:center; }
-html.theme-light .setup-label-display { border-color:rgba(209,143,0,.35); color:var(--text); }
-.setup-label-display:hover, .setup-label-display:focus-visible { border-color:var(--accent); background:rgba(255,204,51,.05); outline:none; box-shadow:var(--focus); }
-.setup-label-edit-icon { font-size:.75rem; opacity:.45; flex-shrink:0; }
-/* Setup label textarea styled to match the heading display above */
-.setup-label-input { background:var(--panel-alt); border:2px solid var(--accent); color:var(--text); padding:.65rem 1.1rem; font-size:clamp(1.5rem,3.5vw,2.5rem); font-weight:800; border-radius:22px; text-align:center; letter-spacing:.55px; -webkit-user-select:text; user-select:text; width:100%; resize:none; line-height:1.15; font-family:inherit; min-height:4rem; }
-.setup-label-input:focus { outline:none; box-shadow:var(--focus); }
-@keyframes setup-label-wiggle { 0%,100%{transform:translateX(0) rotate(0deg)} 20%{transform:translateX(-4px) rotate(-.8deg)} 40%{transform:translateX(4px) rotate(.8deg)} 62%{transform:translateX(-2px) rotate(-.4deg)} 80%{transform:translateX(2px) rotate(.4deg)} }
-.setup-label-display.wiggle { animation:setup-label-wiggle .55s ease; }
+/* Heading wrapper: anchors the floating pencil edit button */
+.heading-prompt-wrap { position:relative; width:100%; }
+/* Pencil edit button — floats top-right of the heading, setup mode only */
+.setup-edit-prompt-btn { position:absolute; top:0; right:0; transform:translateY(-25%); width:2rem; height:2rem; border-radius:999px; background:rgba(255,204,51,.13); border:1px solid rgba(255,204,51,.3); color:var(--accent); font-size:1rem; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background .2s,box-shadow .2s; -webkit-tap-highlight-color:transparent; }
+.setup-edit-prompt-btn:hover { background:rgba(255,204,51,.22); }
+.setup-edit-prompt-btn:focus-visible { outline:none; box-shadow:var(--focus); }
+html.theme-light .setup-edit-prompt-btn { background:rgba(209,143,0,.1); border-color:rgba(209,143,0,.3); }
+/* Pencil wiggle animation */
+@keyframes pencil-wiggle { 0%,100%{transform:translateY(-25%) rotate(0deg)} 20%{transform:translateY(-25%) rotate(-18deg)} 45%{transform:translateY(-25%) rotate(14deg)} 65%{transform:translateY(-25%) rotate(-9deg)} 82%{transform:translateY(-25%) rotate(6deg)} }
+.setup-edit-prompt-btn.wiggle { animation:pencil-wiggle .55s ease; }
+/* Title shimmer — gold sweep across heading text on editability hint */
+@keyframes heading-shimmer { 0%{background-position:-250% center} 100%{background-position:250% center} }
+h1#headingMain.shimmer { background:linear-gradient(90deg,var(--muted) 30%,var(--accent) 50%,var(--muted) 70%); background-size:250% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:heading-shimmer 1.1s ease-in-out; }
+/* Inline label textarea — matches h1 exactly so swap is seamless */
+.setup-label-input { background:transparent; border:none; color:var(--muted); padding:0; font-size:clamp(2.1rem,4.2vw,3.1rem); font-weight:800; border-radius:0; text-align:center; letter-spacing:.85px; -webkit-user-select:text; user-select:text; width:100%; resize:none; line-height:1.03; font-family:inherit; margin:.25rem 0 .7rem; display:block; }
+.setup-label-input:focus { outline:none; box-shadow:none; border-bottom:2px solid var(--accent); }
+@media (max-width:780px){ .setup-label-input { font-size:clamp(1.85rem,7vw,2.5rem); } }
 /* Logo variant override classes */
 .footer-logo.logo-force-dark .logo-light { display:none !important }
 .footer-logo.logo-force-dark .logo-dark  { display:block !important }
