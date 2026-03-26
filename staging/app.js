@@ -313,6 +313,8 @@
     const panel=document.querySelector('.panel');
     const editBar=document.getElementById('logoEditBar');
     if(!logoEl||!panel||!editBar)return;
+    // Force visible before rect capture — hidden logo (display:none) returns zero rect
+    logoEl.style.display='';
     // Capture current viewport coords before switching to fixed
     const lr=logoEl.getBoundingClientRect();
     const fixedBottom=window.innerHeight-lr.bottom;
@@ -323,7 +325,6 @@
     logoEl.style.left=fixedLeft+'px';
     logoEl.style.right='auto';
     logoEl.style.transform=`rotate(${kioskSettings.logoAngle||0}deg)`;
-    logoEl.style.display='';
     logoEl.classList.add('logo-editable');
     logoEl.classList.toggle('logo-hidden-preview',kioskSettings.logoVisible===false);
     panel.classList.add('logo-editing');
@@ -333,7 +334,7 @@
     const rotateValEl=document.getElementById('logoEditRotateVal');
     if(rotateSlider)rotateSlider.value=String(kioskSettings.logoAngle||0);
     if(rotateValEl)rotateValEl.textContent=(kioskSettings.logoAngle||0)+'°';
-    let startX,startY,startBottom,startLeft,capturedId=null,hasMoved=false,isDown=false;
+    let startX,startY,startBottom,startLeft,capturedId=null,hasMoved=false,isDown=false,_everMoved=false;
     function onDown(e){
       e.preventDefault();
       e.stopPropagation();
@@ -347,7 +348,7 @@
       if(!isDown)return;
       e.stopPropagation();
       const dx=e.clientX-startX,dy=e.clientY-startY;
-      if(Math.abs(dx)>6||Math.abs(dy)>6)hasMoved=true;
+      if(Math.abs(dx)>6||Math.abs(dy)>6){hasMoved=true;_everMoved=true;}
       logoEl.style.bottom=(startBottom-dy)+'px';
       logoEl.style.left=(startLeft+dx)+'px';
     }
@@ -378,27 +379,30 @@
     function onVariantToggle(){const _cycle={auto:'dark',dark:'light',light:'auto'};kioskSettings.logoVariant=_cycle[kioskSettings.logoVariant||'auto']||'auto';logoEl.classList.remove('logo-force-dark','logo-force-light');if(kioskSettings.logoVariant==='dark')logoEl.classList.add('logo-force-dark');else if(kioskSettings.logoVariant==='light')logoEl.classList.add('logo-force-light');_syncVariantBtn();}
     if(variantBtn)variantBtn.addEventListener('click',onVariantToggle);
     _syncVariantBtn();
-    _logoEditListeners={el:logoEl,panel,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle};
+    _logoEditListeners={el:logoEl,panel,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle,everMoved:false};
+    Object.defineProperty(_logoEditListeners,'everMoved',{get:()=>_everMoved,enumerable:true});
     document.getElementById('logoEditDone').addEventListener('click',exitLogoEditMode,{once:true});
   }
   function exitLogoEditMode(){
     const editBar=document.getElementById('logoEditBar');
     if(editBar)editBar.classList.add('hidden');
     if(_logoEditListeners){
-      const{el,panel,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle}=_logoEditListeners;
+      const{el,panel,onDown,onMove,onUp,rotateSlider,onRotate,variantBtn,onVariantToggle,everMoved}=_logoEditListeners;
       el.removeEventListener('pointerdown',onDown);
       el.removeEventListener('pointermove',onMove);
       el.removeEventListener('pointerup',onUp);
       el.removeEventListener('pointercancel',onUp);
       if(rotateSlider&&onRotate)rotateSlider.removeEventListener('input',onRotate);
       if(variantBtn&&onVariantToggle)variantBtn.removeEventListener('click',onVariantToggle);
-      // Convert fixed px coords back to panel-relative percentages
-      const panelEl=panel||document.querySelector('.panel');
-      if(panelEl){
-        const pr=panelEl.getBoundingClientRect();
-        const lr=el.getBoundingClientRect();
-        kioskSettings.logoBottom=((pr.bottom-lr.bottom)/pr.height)*100;
-        kioskSettings.logoRight=((pr.right-lr.right)/pr.width)*100;
+      // Only recompute position if logo was actually dragged — avoids outline-offset rounding drift
+      if(everMoved){
+        const panelEl=panel||document.querySelector('.panel');
+        if(panelEl){
+          const pr=panelEl.getBoundingClientRect();
+          const lr=el.getBoundingClientRect();
+          kioskSettings.logoBottom=((pr.bottom-lr.bottom)/pr.height)*100;
+          kioskSettings.logoRight=((pr.right-lr.right)/pr.width)*100;
+        }
       }
       el.style.left='';
       el.style.right='';
