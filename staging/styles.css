@@ -64,7 +64,7 @@ input, button, textarea { touch-action:manipulation; }
 html,body { height:-webkit-fill-available; }
 @supports (-webkit-touch-callout:none){ body{ min-height:-webkit-fill-available; } }
 html { overscroll-behavior:none }
-h1#headingMain { flex:none; width:auto; max-width:calc(100% - 1.5rem); margin:.25rem 0 .7rem; font-weight:800; line-height:1.03; font-size:clamp(2.1rem,4.2vw,3.1rem); text-align:center; letter-spacing:.85px; color:var(--muted); text-shadow:none }
+h1#headingMain { margin:.25rem 0 .7rem; font-weight:800; line-height:1.03; font-size:clamp(2.1rem,4.2vw,3.1rem); text-align:center; letter-spacing:.85px; color:var(--muted); text-shadow:none }
 .rating-text { margin:.25rem 0 0; text-align:center; font-size:clamp(1.05rem,1.4vw,1.3rem); font-weight:600; letter-spacing:.6px }
 .wrap { width:100%; max-width:1180px; display:flex; flex-direction:column; gap:1.15rem; flex:1; min-height:100%; }
 .panel { background:var(--panel); border:1px solid #22292f; padding:1.05rem clamp(.9rem,3vw,3.2rem) 2.9rem; border-radius:var(--radius); box-shadow:0 12px 40px -12px rgba(0,0,0,.65),0 2px 6px rgba(0,0,0,.4); position:relative; overflow:hidden; transition:background .4s,border-color .4s,color .4s; flex:1; display:flex; flex-direction:column; isolation:isolate; }
@@ -201,19 +201,21 @@ html.theme-light .circle-timer-track { stroke:rgba(0,0,0,.10); }
 .setup-title-input { background:var(--panel-alt); border:2px solid #273039; color:var(--text); padding:.85rem 1.1rem; font-size:1.2rem; border-radius:22px; text-align:center; letter-spacing:.5px; font-weight:600; -webkit-user-select:text; user-select:text; width:100%; }
 .setup-title-input:focus { outline:none; box-shadow:var(--focus); border-color:var(--accent); }
 textarea.setup-title-input { resize:none; line-height:1.45; min-height:5.2rem; font-family:inherit; }
-/* Heading wrapper: h1 and inline pencil hint sit side-by-side; textarea wraps below */
-.heading-prompt-wrap { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:center; gap:0 .2em; }
-/* Pencil hint — subtle inline glyph immediately after heading text, setup mode only */
-.setup-edit-prompt-btn { background:none; border:none; color:var(--muted); font-size:1rem; font-weight:400; opacity:.32; cursor:pointer; padding:0 .05em; margin-top:.55em; line-height:1; letter-spacing:0; align-self:flex-start; flex-shrink:0; -webkit-tap-highlight-color:transparent; transition:opacity .2s; }
-.setup-edit-prompt-btn:hover,.setup-edit-prompt-btn:focus-visible { opacity:.7; outline:none; }
-/* Pencil wiggle animation — rotation only, no position offset */
-@keyframes pencil-wiggle { 0%,100%{transform:rotate(0deg)} 20%{transform:rotate(-22deg)} 45%{transform:rotate(16deg)} 65%{transform:rotate(-10deg)} 82%{transform:rotate(7deg)} }
-.setup-edit-prompt-btn.wiggle { animation:pencil-wiggle .5s ease; }
+/* Heading wrapper: anchors the floating pencil edit button */
+.heading-prompt-wrap { position:relative; width:100%; }
+/* Pencil edit button — floats top-right of the heading, setup mode only */
+.setup-edit-prompt-btn { position:absolute; top:0; right:0; transform:translateY(-25%); width:2rem; height:2rem; border-radius:999px; background:rgba(255,204,51,.13); border:1px solid rgba(255,204,51,.3); color:var(--accent); font-size:1rem; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background .2s,box-shadow .2s; -webkit-tap-highlight-color:transparent; }
+.setup-edit-prompt-btn:hover { background:rgba(255,204,51,.22); }
+.setup-edit-prompt-btn:focus-visible { outline:none; box-shadow:var(--focus); }
+html.theme-light .setup-edit-prompt-btn { background:rgba(209,143,0,.1); border-color:rgba(209,143,0,.3); }
+/* Pencil wiggle animation */
+@keyframes pencil-wiggle { 0%,100%{transform:translateY(-25%) rotate(0deg)} 20%{transform:translateY(-25%) rotate(-18deg)} 45%{transform:translateY(-25%) rotate(14deg)} 65%{transform:translateY(-25%) rotate(-9deg)} 82%{transform:translateY(-25%) rotate(6deg)} }
+.setup-edit-prompt-btn.wiggle { animation:pencil-wiggle .55s ease; }
 /* Title shimmer — gold sweep across heading text on editability hint */
 @keyframes heading-shimmer { 0%{background-position:-250% center} 100%{background-position:250% center} }
 h1#headingMain.shimmer { background:linear-gradient(90deg,var(--muted) 30%,var(--accent) 50%,var(--muted) 70%); background-size:250% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:heading-shimmer 1.1s ease-in-out; }
 /* Inline label textarea — matches h1 exactly so swap is seamless */
-.setup-label-input { flex:0 0 100%; background:transparent; border:none; color:var(--muted); padding:0; font-size:clamp(2.1rem,4.2vw,3.1rem); font-weight:800; border-radius:0; text-align:center; letter-spacing:.85px; -webkit-user-select:text; user-select:text; width:100%; resize:none; line-height:1.03; font-family:inherit; margin:.25rem 0 .7rem; display:block; }
+.setup-label-input { background:transparent; border:none; color:var(--muted); padding:0; font-size:clamp(2.1rem,4.2vw,3.1rem); font-weight:800; border-radius:0; text-align:center; letter-spacing:.85px; -webkit-user-select:text; user-select:text; width:100%; resize:none; line-height:1.03; font-family:inherit; margin:.25rem 0 .7rem; display:block; }
 .setup-label-input:focus { outline:none; box-shadow:none; border-bottom:2px solid var(--accent); }
 @media (max-width:780px){ .setup-label-input { font-size:clamp(1.85rem,7vw,2.5rem); } }
 /* Logo variant override classes */
